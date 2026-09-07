@@ -9,11 +9,28 @@ sync_jobs="${JOBS:-4}"
 command -v repo >/dev/null || { echo "repo tool is required" >&2; exit 1; }
 command -v git >/dev/null || { echo "git is required" >&2; exit 1; }
 
+run_repo_sync() {
+    local jobs="$1" sync_pid
+    shift
+    GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
+        repo sync -c --no-tags --force-checkout -j"${jobs}" "$@" &
+    sync_pid=$!
+    while kill -0 "${sync_pid}" 2>/dev/null; do
+        for _ in {1..60}; do
+            sleep 5
+            kill -0 "${sync_pid}" 2>/dev/null || break
+        done
+        if kill -0 "${sync_pid}" 2>/dev/null; then
+            echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) repo sync is still active (${jobs} job(s))"
+        fi
+    done
+    wait "${sync_pid}"
+}
+
 sync_with_retries() {
     local attempt delay=15 jobs="${sync_jobs}"
     for attempt in 1 2 3 4 5 6; do
-        if GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
-            repo sync -c --no-tags --force-checkout -j"${jobs}" "$@"; then
+        if run_repo_sync "${jobs}" "$@"; then
             return 0
         fi
         [[ "${attempt}" == 6 ]] && return 1
@@ -48,10 +65,12 @@ if [[ -d .repo ]]; then
 fi
 
 init_with_retries
+echo "Syncing the minimal build/make project before applying local manifests"
 sync_with_retries build/make
 
 mkdir -p .repo/local_manifests
 cp "${repo_root}"/overlays/lineage-23.2/*.xml .repo/local_manifests/
+echo "Syncing the complete LineageOS 23.2 source tree; progress heartbeat is every five minutes"
 sync_with_retries
 
 repo manifest -r -o "${lock_output}"
