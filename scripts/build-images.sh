@@ -39,6 +39,7 @@ for command in repo git python3 sha256sum; do
 done
 [[ "${android_dir}" == /yocto/* ]] || die "ANDROID_WORKSPACE must be under /yocto"
 [[ "${out_dir}" == "${android_dir}"/* ]] || die "ANDROID_OUT_DIR must be inside ANDROID_WORKSPACE"
+out_dir_relative="${out_dir#"${android_dir}/"}"
 [[ "${artifact_dir}" == /yocto/* ]] || die "OUTPUT_DIR must be under /yocto"
 [[ "${manifest_cache_dir}" == /yocto/* ]] || die "ANDROID_MANIFEST_CACHE_DIR must be under /yocto"
 [[ -s "${lock_file}" ]] || die "reviewed source lock missing: ${lock_file}"
@@ -95,7 +96,10 @@ python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py"
 echo "Applying the pinned Waydroid patch series"
 "${repo_root}/scripts/apply-waydroid-patches-strict.sh" "${android_dir}"
 
-export OUT_DIR="${out_dir}"
+# Some Android 16 Soong modules identify host outputs by their leading
+# "out/" component. Keep this path relative to TOP while its validated
+# physical location remains under /yocto/android-16-source.
+export OUT_DIR="${out_dir_relative}"
 unset OUT_DIR_COMMON_BASE
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "${repo_root}" show -s --format=%ct HEAD)}"
 # Android's envsetup is not nounset-safe.
