@@ -15,6 +15,17 @@ def main() -> int:
     manifest = Path(sys.argv[1])
     root = ET.parse(manifest).getroot()
     projects = root.findall("project")
+    required_projects = {
+        "device/waydroid/waydroid": "active-esl/android_device_waydroid_waydroid",
+        "vendor/extra": "active-esl/android_vendor_waydroid",
+        "external/v4l2_codec2": "active-esl/android_external_v4l2_codec2",
+    }
+    resolved_projects = {project.get("path"): project.get("name") for project in projects}
+    missing_required = {
+        path: name
+        for path, name in required_projects.items()
+        if resolved_projects.get(path) != name
+    }
     invalid = []
     for project in projects:
         revision = project.get("revision", "")
@@ -22,10 +33,16 @@ def main() -> int:
             invalid.append((project.get("path") or project.get("name"), revision))
 
     forbidden = [element.tag for element in root if element.tag in {"include", "remove-project", "extend-project"}]
-    if not projects or invalid or forbidden:
-        print(f"invalid lock: projects={len(projects)} floating={len(invalid)} directives={len(forbidden)}", file=sys.stderr)
+    if not projects or invalid or forbidden or missing_required:
+        print(
+            f"invalid lock: projects={len(projects)} floating={len(invalid)} "
+            f"directives={len(forbidden)} required={len(missing_required)}",
+            file=sys.stderr,
+        )
         for name, revision in invalid[:10]:
             print(f"floating revision: {name}: {revision}", file=sys.stderr)
+        for path, name in missing_required.items():
+            print(f"required project missing or replaced: {path}: {name}", file=sys.stderr)
         return 1
 
     print(f"valid immutable lock: {len(projects)} projects")

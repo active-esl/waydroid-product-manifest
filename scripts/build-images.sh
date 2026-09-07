@@ -45,7 +45,7 @@ for attempt in 1 2 3 4; do
     (( sync_jobs > 1 )) && sync_jobs=$((sync_jobs / 2))
 done
 
-python3 "${android_dir}/vendor/waydroid/scripts/check-selinux-runtime-gate.py"
+python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py"
 "${repo_root}/scripts/apply-waydroid-patches-strict.sh" "${android_dir}"
 
 export OUT_DIR_COMMON_BASE="${out_base}"
