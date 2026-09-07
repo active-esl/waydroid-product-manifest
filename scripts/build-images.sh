@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 android_dir="${ANDROID_WORKSPACE:-/yocto/android-16-source}"
 out_dir="${ANDROID_OUT_DIR:-${android_dir}/out}"
 artifact_dir="${OUTPUT_DIR:-/yocto/android-16-artifacts/local}"
+manifest_cache_dir="${ANDROID_MANIFEST_CACHE_DIR:-/yocto/android-16-manifests}"
 lock_file="${SOURCE_LOCK:-${repo_root}/locks/lineage-23.2-lock.xml}"
 jobs="${JOBS:-8}"
 targets=(
@@ -16,9 +17,10 @@ die() { echo "$*" >&2; exit 1; }
 
 run_repo_sync() {
     local sync_jobs="$1" sync_pid
+    shift
 
     GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
-        repo sync -c --no-tags --fail-fast --force-checkout -d -j"${sync_jobs}" &
+        repo sync -c --no-tags --fail-fast --force-checkout -d -j"${sync_jobs}" "$@" &
     sync_pid=$!
     while kill -0 "${sync_pid}" 2>/dev/null; do
         for _ in {1..60}; do
@@ -38,34 +40,55 @@ done
 [[ "${android_dir}" == /yocto/* ]] || die "ANDROID_WORKSPACE must be under /yocto"
 [[ "${out_dir}" == "${android_dir}"/* ]] || die "ANDROID_OUT_DIR must be inside ANDROID_WORKSPACE"
 [[ "${artifact_dir}" == /yocto/* ]] || die "OUTPUT_DIR must be under /yocto"
+[[ "${manifest_cache_dir}" == /yocto/* ]] || die "ANDROID_MANIFEST_CACHE_DIR must be under /yocto"
 [[ -s "${lock_file}" ]] || die "reviewed source lock missing: ${lock_file}"
 python3 "${repo_root}/scripts/validate-lock.py" "${lock_file}"
 
-mkdir -p "${android_dir}" "${out_dir}" "${artifact_dir}"
+mkdir -p "${android_dir}" "${out_dir}" "${artifact_dir}" "${manifest_cache_dir}"
+lock_sha="$(sha256sum "${lock_file}" | cut -d' ' -f1)"
+manifest_repo="${manifest_cache_dir}/${lock_sha}"
+if ! git -C "${manifest_repo}" rev-parse --verify HEAD >/dev/null 2>&1; then
+    if [[ -e "${manifest_repo}" ]]; then
+        quarantine="${manifest_repo}.invalid.$(date -u +%s)"
+        echo "Quarantining incomplete cached manifest repository: ${quarantine}" >&2
+        mv -- "${manifest_repo}" "${quarantine}"
+    fi
+    mkdir -p "${manifest_repo}"
+    git -C "${manifest_repo}" init -q -b locked
+    install -m 0644 "${lock_file}" "${manifest_repo}/default.xml"
+    git -C "${manifest_repo}" add default.xml
+    git -C "${manifest_repo}" \
+        -c user.name='AESL Android CI' -c user.email='ci@active-esl.invalid' \
+        commit -q -m "Android source lock ${lock_sha}"
+fi
+echo "${lock_sha}  ${manifest_repo}/default.xml" | sha256sum --check --strict
+manifest_url="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().as_uri())' "${manifest_repo}")"
+
 cd "${android_dir}"
 
-# Reset only repo's manifest metadata so a previous bootstrap checkout can be
-# converted into the reviewed standalone lock while retaining downloaded Git
-# objects on the persistent /yocto volume.
-if [[ -d .repo ]]; then
-    rm -rf .repo/local_manifests .repo/manifests .repo/manifests.git
-    rm -f .repo/manifest.xml
+cached_lock="$(cat .repo/aesl-source-lock.sha256 2>/dev/null || true)"
+cached_manifest_url="$(git --git-dir=.repo/manifests.git config --get remote.origin.url 2>/dev/null || true)"
+if [[ "${cached_lock}" == "${lock_sha}" && "${cached_manifest_url}" == "${manifest_url}" ]]; then
+    echo "Reusing cached repo initialization for source lock ${lock_sha}"
+else
+    echo "Activating Git-backed source lock ${lock_sha}"
+    repo init -u "${manifest_url}" -b locked -m default.xml --git-lfs
 fi
-lock_url="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().as_uri())' "${lock_file}")"
-echo "Initializing repo from the reviewed standalone lock"
-echo "repo may warn that the standalone manifest has no Git HEAD; successful initialization is the gate"
-repo init -u "${lock_url}" --standalone-manifest --git-lfs
 
-echo "Synchronizing the exact locked source revisions"
-sync_jobs="${jobs}"
-for attempt in 1 2 3 4; do
-    if run_repo_sync "${sync_jobs}"; then
-        break
-    fi
-    [[ "${attempt}" == 4 ]] && die "repo sync failed after four attempts"
-    (( sync_jobs > 1 )) && sync_jobs=$((sync_jobs / 2))
-    echo "locked repo sync attempt ${attempt} failed; retrying with ${sync_jobs} job(s)" >&2
-done
+echo "Restoring exact locked revisions from the local /yocto object cache"
+if ! run_repo_sync "${jobs}" --local-only; then
+    echo "Local object cache is incomplete; fetching only missing locked revisions"
+    sync_jobs="${jobs}"
+    for attempt in 1 2 3 4; do
+        if run_repo_sync "${sync_jobs}"; then
+            break
+        fi
+        [[ "${attempt}" == 4 ]] && die "repo sync failed after four attempts"
+        (( sync_jobs > 1 )) && sync_jobs=$((sync_jobs / 2))
+        echo "locked repo sync attempt ${attempt} failed; retrying with ${sync_jobs} job(s)" >&2
+    done
+fi
+printf '%s\n' "${lock_sha}" > .repo/aesl-source-lock.sha256
 
 echo "Running the SELinux production gate"
 python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py"
