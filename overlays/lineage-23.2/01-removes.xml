@@ -9,7 +9,7 @@
   <remove-project name="platform/external/minigbm" />
   <remove-project name="platform/external/rust/android-crates-io" />
   <remove-project name="platform/external/rust/ninja-to-soong" />
-  <remove-project name="platform/external/v4l2_codec2" />
+  <remove-project name="platform/external/v4l2_codec2" optional="true" />
   <remove-project name="platform/prebuilts/vndk/v34" />
   <remove-project name="LineageOS/android_packages_apps_TvSettings" />
 </manifest>
