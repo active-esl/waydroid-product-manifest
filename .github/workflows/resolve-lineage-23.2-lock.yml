@@ -41,7 +41,7 @@ jobs:
         env:
           ANDROID_WORKSPACE: /yocto/android-16-source
           LOCK_OUTPUT: ${{ github.workspace }}/lineage-23.2-lock.xml
-          JOBS: "8"
+          JOBS: "4"
         run: ./scripts/resolve-lock.sh
       - uses: actions/upload-artifact@v4
         with:

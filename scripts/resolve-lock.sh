@@ -4,20 +4,38 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 android_dir="${ANDROID_WORKSPACE:-${repo_root}/.android-workspace}"
 lock_output="${LOCK_OUTPUT:-${repo_root}/lineage-23.2-lock.xml}"
-sync_jobs="${JOBS:-8}"
+sync_jobs="${JOBS:-4}"
 
 command -v repo >/dev/null || { echo "repo tool is required" >&2; exit 1; }
 command -v git >/dev/null || { echo "git is required" >&2; exit 1; }
 
 sync_with_retries() {
-    local attempt jobs="${sync_jobs}"
-    for attempt in 1 2 3 4; do
+    local attempt delay=15 jobs="${sync_jobs}"
+    for attempt in 1 2 3 4 5 6; do
         if GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
-            repo sync -c --no-tags --fail-fast --force-checkout -j"${jobs}" "$@"; then
+            repo sync -c --no-tags --force-checkout -j"${jobs}" "$@"; then
             return 0
         fi
-        [[ "${attempt}" == 4 ]] && return 1
+        [[ "${attempt}" == 6 ]] && return 1
+        echo "repo sync attempt ${attempt} failed; retrying in ${delay}s with ${jobs} job(s)" >&2
+        sleep "${delay}"
         (( jobs > 1 )) && jobs=$((jobs / 2))
+        (( delay < 120 )) && delay=$((delay * 2))
+    done
+}
+
+init_with_retries() {
+    local attempt delay=15
+    for attempt in 1 2 3 4 5 6; do
+        if GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
+            repo init -u https://github.com/LineageOS/android.git \
+                -b lineage-23.2 --git-lfs; then
+            return 0
+        fi
+        [[ "${attempt}" == 6 ]] && return 1
+        echo "repo init attempt ${attempt} failed; retrying in ${delay}s" >&2
+        sleep "${delay}"
+        (( delay < 120 )) && delay=$((delay * 2))
     done
 }
 
@@ -29,7 +47,7 @@ if [[ -d .repo ]]; then
     rm -f .repo/manifest.xml
 fi
 
-repo init -u https://github.com/LineageOS/android.git -b lineage-23.2 --git-lfs
+init_with_retries
 sync_with_retries build/make
 
 mkdir -p .repo/local_manifests
