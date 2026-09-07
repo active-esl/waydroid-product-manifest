@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 android_dir="${ANDROID_WORKSPACE:-/yocto/android-16-source}"
-out_base="${ANDROID_OUT_BASE:-/yocto/android-16-out}"
+out_dir="${ANDROID_OUT_DIR:-${android_dir}/out}"
 artifact_dir="${OUTPUT_DIR:-/yocto/android-16-artifacts/local}"
 lock_file="${SOURCE_LOCK:-${repo_root}/locks/lineage-23.2-lock.xml}"
 jobs="${JOBS:-8}"
@@ -36,12 +36,12 @@ for command in repo git python3 sha256sum; do
     command -v "${command}" >/dev/null || die "required command missing: ${command}"
 done
 [[ "${android_dir}" == /yocto/* ]] || die "ANDROID_WORKSPACE must be under /yocto"
-[[ "${out_base}" == /yocto/* ]] || die "ANDROID_OUT_BASE must be under /yocto"
+[[ "${out_dir}" == "${android_dir}"/* ]] || die "ANDROID_OUT_DIR must be inside ANDROID_WORKSPACE"
 [[ "${artifact_dir}" == /yocto/* ]] || die "OUTPUT_DIR must be under /yocto"
 [[ -s "${lock_file}" ]] || die "reviewed source lock missing: ${lock_file}"
 python3 "${repo_root}/scripts/validate-lock.py" "${lock_file}"
 
-mkdir -p "${android_dir}" "${out_base}" "${artifact_dir}"
+mkdir -p "${android_dir}" "${out_dir}" "${artifact_dir}"
 cd "${android_dir}"
 
 # Reset only repo's manifest metadata so a previous bootstrap checkout can be
@@ -72,7 +72,8 @@ python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py"
 echo "Applying the pinned Waydroid patch series"
 "${repo_root}/scripts/apply-waydroid-patches-strict.sh" "${android_dir}"
 
-export OUT_DIR_COMMON_BASE="${out_base}"
+export OUT_DIR="${out_dir}"
+unset OUT_DIR_COMMON_BASE
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "${repo_root}" show -s --format=%ct HEAD)}"
 # Android's envsetup is not nounset-safe.
 set +u

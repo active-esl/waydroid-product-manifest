@@ -20,7 +20,7 @@ jobs:
         run: scripts/install-repo-tool.sh
       - name: Preflight CI storage
         run: |
-          install -d /yocto/android-16-source /yocto/android-16-out /yocto/android-16-artifacts
+          install -d /yocto/android-16-source/out /yocto/android-16-artifacts
           available_kib=$(df --output=avail /yocto | tail -1 | tr -d ' ')
           minimum_kib=$((300 * 1024 * 1024))
           if [ "${available_kib}" -lt "${minimum_kib}" ]; then
@@ -32,7 +32,7 @@ jobs:
       - name: Build x86_64 compatibility and i.MX8MM images
         env:
           ANDROID_WORKSPACE: /yocto/android-16-source
-          ANDROID_OUT_BASE: /yocto/android-16-out
+          ANDROID_OUT_DIR: /yocto/android-16-source/out
           OUTPUT_DIR: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
           JOBS: "8"
         run: scripts/build-images.sh
