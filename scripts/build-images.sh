@@ -8,8 +8,8 @@ artifact_dir="${OUTPUT_DIR:-/yocto/android-16-artifacts/local}"
 lock_file="${SOURCE_LOCK:-${repo_root}/locks/lineage-23.2-lock.xml}"
 jobs="${JOBS:-8}"
 targets=(
-    lineage_waydroid_x86_64-userdebug
-    lineage_waydroid_aesl_2gb_arm64_only-userdebug
+    lineage_waydroid_x86_64-bp4a-userdebug
+    lineage_waydroid_aesl_2gb_arm64_only-bp4a-userdebug
 )
 
 die() { echo "$*" >&2; exit 1; }
