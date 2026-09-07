@@ -28,6 +28,13 @@ Review the workflow artifact before committing it to
 `locks/lineage-23.2-lock.xml`. Updating that file is a controlled source-base
 change and should be performed independently of an image release.
 
+The **Build locked Android 16 images** workflow refuses to build without that
+reviewed lock. It builds the x86_64 compatibility target first and the AESL
+i.MX8MM ARM64-only target second, generates an SPDX SBOM for each, and records
+checksums and immutable build metadata with the images. Development
+`userdebug` output is evidence for integration only; a production release must
+also pass the `user` target and the board acceptance procedure.
+
 Google applications, Widevine, native-translation prebuilts, Android TV
 Settings and optional Redroid prebuilts are excluded from the AESL Vanilla
 source graph. Licence verification remains a release gate before the first

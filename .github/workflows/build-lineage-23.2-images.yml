@@ -1,0 +1,44 @@
+name: Build locked Android 16 images
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-lineage-23.2-images
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: [self-hosted, esl-proxmox]
+    timeout-minutes: 720
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Android repo launcher
+        run: scripts/install-repo-tool.sh
+      - name: Preflight CI storage
+        run: |
+          install -d /yocto/android-16-source /yocto/android-16-out /yocto/android-16-artifacts
+          available_kib=$(df --output=avail /yocto | tail -1 | tr -d ' ')
+          minimum_kib=$((300 * 1024 * 1024))
+          if [ "${available_kib}" -lt "${minimum_kib}" ]; then
+            echo "Android build volume has less than 300 GiB free" >&2
+            df -h /yocto >&2
+            exit 1
+          fi
+          df -h / /yocto
+      - name: Build x86_64 compatibility and i.MX8MM images
+        env:
+          ANDROID_WORKSPACE: /yocto/android-16-source
+          ANDROID_OUT_BASE: /yocto/android-16-out
+          OUTPUT_DIR: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
+          JOBS: "8"
+        run: scripts/build-images.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aesl-lineage-23.2-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 30
