@@ -28,7 +28,7 @@ Review the workflow artifact before committing it to
 `locks/lineage-23.2-lock.xml`. Updating that file is a controlled source-base
 change and should be performed independently of an image release.
 
-No Google applications are selected for the AESL Vanilla product. The
-bootstrap currently retains upstream optional proprietary projects because
-they are part of the upstream source graph; exclusion and licence verification
-are release gates before the first production image.
+Google applications, Widevine, native-translation prebuilts, Android TV
+Settings and optional Redroid prebuilts are excluded from the AESL Vanilla
+source graph. Licence verification remains a release gate before the first
+production image.
