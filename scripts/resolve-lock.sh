@@ -9,9 +9,30 @@ sync_jobs="${JOBS:-4}"
 command -v repo >/dev/null || { echo "repo tool is required" >&2; exit 1; }
 command -v git >/dev/null || { echo "git is required" >&2; exit 1; }
 
+quarantine_invalid_project_gitdirs() {
+    local projects_root="${android_dir}/.repo/projects"
+    local gitdir relative quarantine_root quarantine_path
+
+    [[ -d "${projects_root}" ]] || return 0
+
+    while IFS= read -r -d '' gitdir; do
+        if git --git-dir="${gitdir}" rev-parse --git-dir >/dev/null 2>&1; then
+            continue
+        fi
+
+        relative="${gitdir#"${projects_root}/"}"
+        quarantine_root="${android_dir}/.repo/corrupt-projects"
+        quarantine_path="${quarantine_root}/${relative//\//__}.$(date -u +%s)"
+        mkdir -p "${quarantine_root}"
+        echo "Quarantining invalid repo project metadata: ${relative}" >&2
+        mv -- "${gitdir}" "${quarantine_path}"
+    done < <(find "${projects_root}" -type d -name '*.git' -prune -print0)
+}
+
 run_repo_sync() {
     local jobs="$1" sync_pid
     shift
+    quarantine_invalid_project_gitdirs
     GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
         repo sync -c --no-tags --force-checkout -j"${jobs}" "$@" &
     sync_pid=$!
