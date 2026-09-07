@@ -1,0 +1,30 @@
+name: Resolve Android 16 source lock
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: resolve-lineage-23.2-lock
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: [self-hosted, esl-proxmox]
+    timeout-minutes: 720
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve complete immutable manifest
+        env:
+          ANDROID_WORKSPACE: /opt/actions-runner/_work/android-16-source
+          LOCK_OUTPUT: ${{ github.workspace }}/lineage-23.2-lock.xml
+          JOBS: "8"
+        run: ./scripts/resolve-lock.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lineage-23.2-source-lock
+          path: lineage-23.2-lock.xml
+          if-no-files-found: error
+          retention-days: 30

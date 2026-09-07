@@ -1,0 +1,34 @@
+# AESL Waydroid product manifests
+
+This repository owns the reviewed, immutable source manifests used to build
+Active ESL Waydroid product images.
+
+## Android 16 baseline
+
+- Android: 16 QPR2
+- LineageOS: 23.2
+- Waydroid upstream mirror: `waydroid/dev/lineage-23.2`
+- AESL integration branch: `active-esl/lineage-23.2-aesl`
+- Initial vendor commit: `d39b2f967d7e54642d674030b1bc1310cdb7b93b`
+- Product variants: Vanilla x86_64 validation, then Vanilla ARM64
+
+The files under `overlays/lineage-23.2` are bootstrap inputs only. Branch
+names are permitted there because the resolver converts the complete checkout
+into a flattened manifest containing commit hashes. Product image builds must
+consume a reviewed file under `locks/`; they must never build from the
+bootstrap overlays.
+
+## Resolve a candidate lock
+
+Run the **Resolve Android 16 source lock** workflow. It synchronises the
+LineageOS and Waydroid source graph, writes `lineage-23.2-lock.xml`, and rejects
+the result unless every project revision is a full Git commit hash.
+
+Review the workflow artifact before committing it to
+`locks/lineage-23.2-lock.xml`. Updating that file is a controlled source-base
+change and should be performed independently of an image release.
+
+No Google applications are selected for the AESL Vanilla product. The
+bootstrap currently retains upstream optional proprietary projects because
+they are part of the upstream source graph; exclusion and licence verification
+are release gates before the first production image.
