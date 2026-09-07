@@ -69,8 +69,13 @@ for target in "${targets[@]}"; do
     mkdir -p "${target_artifacts}"
     install -m 0644 "${OUT}/system.img" "${target_artifacts}/system.img"
     install -m 0644 "${OUT}/vendor.img" "${target_artifacts}/vendor.img"
-    install -m 0644 "${OUT}/sbom.spdx" "${target_artifacts}/sbom.spdx"
+    [[ -s "${OUT}/sbom.spdx.json" ]] \
+        || die "Android SPDX JSON SBOM was not generated for ${target}"
+    python3 -m json.tool "${OUT}/sbom.spdx.json" >/dev/null
     install -m 0644 "${OUT}/sbom.spdx.json" "${target_artifacts}/sbom.spdx.json"
+    if [[ -s "${OUT}/sbom.spdx" ]]; then
+        install -m 0644 "${OUT}/sbom.spdx" "${target_artifacts}/sbom.spdx"
+    fi
     find "${OUT}" -maxdepth 1 -type f -name 'installed-files*.txt' \
         -exec install -m 0644 -t "${target_artifacts}" {} +
 done
