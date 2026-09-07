@@ -6,6 +6,7 @@
   <project path="hardware/waydroid" name="waydroid/android_hardware_waydroid" remote="ghub" clone-depth="1" revision="refs/heads/dev/lineage-23.2" />
   <project path="vendor/extra" name="active-esl/android_vendor_waydroid" remote="ghub" clone-depth="1" revision="refs/heads/lineage-23.2-aesl" />
   <project path="vendor/extra/init" name="waydroid/android_vendor_waydroid_init" remote="ghub" clone-depth="1" revision="refs/heads/dev/lineage-23.2" />
+  <project path="packages/apps/TvSettings" name="LineageOS/android_packages_apps_TvSettings" remote="ghub" clone-depth="1" revision="refs/heads/lineage-23.2" />
   <project path="packages/apps/WaydroidUpdater" name="WayDroid-ATV/android_packages_apps_WaydroidUpdater" remote="ghub" clone-depth="1" revision="refs/heads/lineage-20" />
 
   <!-- Audio -->
