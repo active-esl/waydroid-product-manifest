@@ -26,9 +26,20 @@ jobs:
             | sha256sum --check --strict
           chmod 0755 "${RUNNER_TEMP}/android-repo/bin/repo"
           echo "${RUNNER_TEMP}/android-repo/bin" >> "${GITHUB_PATH}"
+      - name: Preflight Android source storage
+        run: |
+          install -d /yocto/android-16-source
+          available_kib=$(df --output=avail /yocto | tail -1 | tr -d ' ')
+          minimum_kib=$((300 * 1024 * 1024))
+          if [ "${available_kib}" -lt "${minimum_kib}" ]; then
+            echo "Android source volume has less than 300 GiB free" >&2
+            df -h /yocto >&2
+            exit 1
+          fi
+          df -h / /yocto
       - name: Resolve complete immutable manifest
         env:
-          ANDROID_WORKSPACE: /opt/actions-runner/_work/android-16-source
+          ANDROID_WORKSPACE: /yocto/android-16-source
           LOCK_OUTPUT: ${{ github.workspace }}/lineage-23.2-lock.xml
           JOBS: "8"
         run: ./scripts/resolve-lock.sh

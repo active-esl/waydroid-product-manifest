@@ -32,3 +32,12 @@ Google applications, Widevine, native-translation prebuilts, Android TV
 Settings and optional Redroid prebuilts are excluded from the AESL Vanilla
 source graph. Licence verification remains a release gate before the first
 production image.
+
+## CI storage invariant
+
+On the AESL self-hosted runner, all persistent Android and Yocto source trees,
+downloads, caches and build outputs must live on the large `/yocto` volume.
+Never place them under `/opt/actions-runner/_work` or the runner root volume;
+that filesystem is reserved for the small job checkout, diagnostics and logs.
+Workflows must preflight `/yocto` capacity before starting a source sync or
+build.
