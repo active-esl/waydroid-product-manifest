@@ -19,6 +19,7 @@ def main() -> int:
         "device/waydroid/waydroid": "active-esl/android_device_waydroid_waydroid",
         "vendor/extra": "active-esl/android_vendor_waydroid",
         "external/v4l2_codec2": "active-esl/android_external_v4l2_codec2",
+        "packages/apps/TvSettings": "LineageOS/android_packages_apps_TvSettings",
     }
     resolved_projects = {project.get("path"): project.get("name") for project in projects}
     missing_required = {
