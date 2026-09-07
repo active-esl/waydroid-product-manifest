@@ -16,6 +16,16 @@ jobs:
     timeout-minutes: 720
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned Android repo launcher
+        run: |
+          install -d "${RUNNER_TEMP}/android-repo/bin"
+          curl --fail --silent --show-error --location \
+            https://storage.googleapis.com/git-repo-downloads/repo \
+            --output "${RUNNER_TEMP}/android-repo/bin/repo"
+          echo "1211b57b57e4122a9c546295a59b37d24068f1164d0e87bef096d5323c413e4f  ${RUNNER_TEMP}/android-repo/bin/repo" \
+            | sha256sum --check --strict
+          chmod 0755 "${RUNNER_TEMP}/android-repo/bin/repo"
+          echo "${RUNNER_TEMP}/android-repo/bin" >> "${GITHUB_PATH}"
       - name: Resolve complete immutable manifest
         env:
           ANDROID_WORKSPACE: /opt/actions-runner/_work/android-16-source
