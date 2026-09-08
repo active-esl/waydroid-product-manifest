@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${AESL_MESON_SITE:?AESL_MESON_SITE is not set}"
-export PYTHONPATH="${AESL_MESON_SITE}${PYTHONPATH:+:${PYTHONPATH}}"
+meson_site="${AESL_MESON_SITE:-/yocto/android-ci-tools/meson-1.7.2/site}"
+[[ -f "${meson_site}/mesonbuild/mesonmain.py" ]] \
+    || { echo "pinned Meson site is missing: ${meson_site}" >&2; exit 1; }
+export PYTHONPATH="${meson_site}${PYTHONPATH:+:${PYTHONPATH}}"
 exec python3 -m mesonbuild.mesonmain "$@"

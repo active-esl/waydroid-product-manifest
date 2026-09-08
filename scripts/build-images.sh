@@ -56,7 +56,8 @@ PY
     cargo_meson="${HOME:?HOME is not set}/.cargo/bin/meson"
     mkdir -p "$(dirname "${cargo_meson}")"
     install -m 0755 "${repo_root}/scripts/pinned-tools/meson" "${cargo_meson}"
-    resolved_version="$(PATH="${HOME}/.cargo/bin:/usr/bin:/usr/local/bin:${PATH}" meson --version)"
+    resolved_version="$(env -u AESL_MESON_SITE \
+        PATH="${HOME}/.cargo/bin:/usr/bin:/usr/local/bin:${PATH}" meson --version)"
     [[ "${resolved_version}" == "${meson_version}" ]] \
         || die "Mesa nested PATH Meson preflight failed: expected ${meson_version}, got ${resolved_version}"
     echo "Pinned Meson preflight passed for job and Mesa nested PATH: ${resolved_version}"
