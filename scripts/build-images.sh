@@ -20,7 +20,7 @@ targets=(
 die() { echo "$*" >&2; exit 1; }
 
 prepare_pinned_meson() {
-    local cargo_meson resolved_version wheel temporary_dir
+    local cargo_meson module_version pinned_meson_pth resolved_version temporary_dir user_site wheel
 
     if [[ ! -f "${meson_tool_dir}/site/mesonbuild/mesonmain.py" ]]; then
         echo "Installing pinned Meson ${meson_version} in the persistent /yocto tool cache"
@@ -60,7 +60,21 @@ PY
         PATH="${HOME}/.cargo/bin:/usr/bin:/usr/local/bin:${PATH}" meson --version)"
     [[ "${resolved_version}" == "${meson_version}" ]] \
         || die "Mesa nested PATH Meson preflight failed: expected ${meson_version}, got ${resolved_version}"
-    echo "Pinned Meson preflight passed for job and Mesa nested PATH: ${resolved_version}"
+
+    # Meson's generated build.ninja does not call the wrapper for installation;
+    # it records `/usr/bin/python3 -m mesonbuild.mesonmain`. Add the reviewed
+    # package directory to Python's user site so that later sanitized command
+    # resolves the same Meson version that generated meson-private/install.dat.
+    user_site="$(/usr/bin/python3 -m site --user-site)"
+    mkdir -p "${user_site}"
+    pinned_meson_pth="${user_site}/aesl-pinned-meson.pth"
+    printf '%s\n' "${meson_tool_dir}/site" > "${pinned_meson_pth}"
+    module_version="$(env -u AESL_MESON_SITE -u PYTHONPATH \
+        PATH="/usr/bin:/bin:/sbin:${PATH}" \
+        /usr/bin/python3 -m mesonbuild.mesonmain --version)"
+    [[ "${module_version}" == "${meson_version}" ]] \
+        || die "Mesa install Python-module preflight failed: expected ${meson_version}, got ${module_version}"
+    echo "Pinned Meson preflight passed for wrapper and install module: ${resolved_version}"
 }
 
 run_repo_sync() {
