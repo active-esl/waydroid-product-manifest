@@ -20,7 +20,7 @@ targets=(
 die() { echo "$*" >&2; exit 1; }
 
 prepare_pinned_meson() {
-    local wheel temporary_dir
+    local cargo_meson resolved_version wheel temporary_dir
 
     if [[ ! -f "${meson_tool_dir}/site/mesonbuild/mesonmain.py" ]]; then
         echo "Installing pinned Meson ${meson_version} in the persistent /yocto tool cache"
@@ -48,7 +48,18 @@ PY
     export PATH="${repo_root}/scripts/pinned-tools:${PATH}"
     [[ "$(meson --version)" == "${meson_version}" ]] \
         || die "pinned Meson preflight failed: expected ${meson_version}, got $(meson --version 2>&1)"
-    echo "Pinned Meson preflight passed: $(meson --version)"
+
+    # Mesa's Android build rule constructs its own PATH with ~/.cargo/bin
+    # before /usr/bin and the inherited job PATH. Put the reviewed wrapper at
+    # that first lookup location so nested Meson invocations cannot fall back
+    # to the runner's older distro package.
+    cargo_meson="${HOME:?HOME is not set}/.cargo/bin/meson"
+    mkdir -p "$(dirname "${cargo_meson}")"
+    install -m 0755 "${repo_root}/scripts/pinned-tools/meson" "${cargo_meson}"
+    resolved_version="$(PATH="${HOME}/.cargo/bin:/usr/bin:/usr/local/bin:${PATH}" meson --version)"
+    [[ "${resolved_version}" == "${meson_version}" ]] \
+        || die "Mesa nested PATH Meson preflight failed: expected ${meson_version}, got ${resolved_version}"
+    echo "Pinned Meson preflight passed for job and Mesa nested PATH: ${resolved_version}"
 }
 
 run_repo_sync() {
