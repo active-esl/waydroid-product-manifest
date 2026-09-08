@@ -70,8 +70,8 @@ run_repo_sync() {
     wait "${sync_pid}"
 }
 
-run_build_with_heartbeat() {
-    local target="$1" build_pid started_at
+run_with_heartbeat() {
+    local stage="$1" build_pid started_at
     shift
 
     started_at="${SECONDS}"
@@ -83,14 +83,14 @@ run_build_with_heartbeat() {
             kill -0 "${build_pid}" 2>/dev/null || break
         done
         if kill -0 "${build_pid}" 2>/dev/null; then
-            echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Android build is active: ${target}; elapsed $(((SECONDS - started_at) / 60)) minute(s)"
+            echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Android CI stage is active: ${stage}; elapsed $(((SECONDS - started_at) / 60)) minute(s)"
             ps -o pid=,etime=,%cpu=,%mem= -p "${build_pid}" || true
         fi
     done
     wait "${build_pid}"
 }
 
-for command in repo git python3 sha256sum; do
+for command in repo git python3 sha256sum timeout ps; do
     command -v "${command}" >/dev/null || die "required command missing: ${command}"
 done
 [[ "${android_dir}" == /yocto/* ]] || die "ANDROID_WORKSPACE must be under /yocto"
@@ -151,7 +151,9 @@ printf '%s\n' "${lock_sha}" > .repo/aesl-source-lock.sha256
 echo "Running the SELinux production gate"
 python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py"
 echo "Applying the pinned Waydroid patch series"
-"${repo_root}/scripts/apply-waydroid-patches-strict.sh" "${android_dir}"
+run_with_heartbeat "Waydroid patch application" \
+    timeout --foreground --kill-after=60s 30m \
+    "${repo_root}/scripts/apply-waydroid-patches-strict.sh" "${android_dir}"
 
 # Some Android 16 Soong modules identify host outputs by their leading
 # "out/" component. Keep this path relative to TOP while its validated
@@ -171,7 +173,8 @@ for target in "${targets[@]}"; do
     lunch "${target}"
     set -u
     echo "Building system, vendor and SPDX outputs for ${target}"
-    run_build_with_heartbeat "${target}" m -j"${jobs}" systemimage vendorimage sbom
+    run_with_heartbeat "Android image build ${target}" \
+        m -j"${jobs}" systemimage vendorimage sbom
 
     case "${target}" in
         *x86_64*) target_artifacts="${artifact_dir}/x86_64" ;;
