@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${AESL_MESON_SITE:?AESL_MESON_SITE is not set}"
+export PYTHONPATH="${AESL_MESON_SITE}${PYTHONPATH:+:${PYTHONPATH}}"
+exec python3 -m mesonbuild.mesonmain "$@"

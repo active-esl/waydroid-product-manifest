@@ -8,12 +8,48 @@ artifact_dir="${OUTPUT_DIR:-/yocto/android-16-artifacts/local}"
 manifest_cache_dir="${ANDROID_MANIFEST_CACHE_DIR:-/yocto/android-16-manifests}"
 lock_file="${SOURCE_LOCK:-${repo_root}/locks/lineage-23.2-lock.xml}"
 jobs="${JOBS:-8}"
+meson_version="1.7.2"
+meson_sha256="82c6818dc81743c96de3a458f06175776ebfde4081195ea31ea6971838f25e38"
+meson_url="https://files.pythonhosted.org/packages/e5/2b/46bda4ef5a7ae4135dbfe27fc0368c44e5a349a897a54fdf2cedb8dcb66e/meson-1.7.2-py3-none-any.whl"
+meson_tool_dir="/yocto/android-ci-tools/meson-${meson_version}"
 targets=(
     lineage_waydroid_x86_64-bp4a-userdebug
     lineage_waydroid_aesl_2gb_arm64_only-bp4a-userdebug
 )
 
 die() { echo "$*" >&2; exit 1; }
+
+prepare_pinned_meson() {
+    local wheel temporary_dir
+
+    if [[ ! -f "${meson_tool_dir}/site/mesonbuild/mesonmain.py" ]]; then
+        echo "Installing pinned Meson ${meson_version} in the persistent /yocto tool cache"
+        mkdir -p /yocto/android-ci-tools
+        temporary_dir="$(mktemp -d /yocto/android-ci-tools/.meson-${meson_version}.XXXXXX)"
+        trap 'rm -rf -- "${temporary_dir}"' RETURN
+        wheel="${temporary_dir}/meson-${meson_version}-py3-none-any.whl"
+        python3 - "${meson_url}" "${wheel}" <<'PY'
+import pathlib
+import sys
+import urllib.request
+
+url, destination = sys.argv[1:]
+urllib.request.urlretrieve(url, pathlib.Path(destination))
+PY
+        echo "${meson_sha256}  ${wheel}" | sha256sum --check --strict
+        mkdir -p "${temporary_dir}/site"
+        python3 -m zipfile -e "${wheel}" "${temporary_dir}/site"
+        rm -f "${wheel}"
+        mv -- "${temporary_dir}" "${meson_tool_dir}"
+        trap - RETURN
+    fi
+
+    export AESL_MESON_SITE="${meson_tool_dir}/site"
+    export PATH="${repo_root}/scripts/pinned-tools:${PATH}"
+    [[ "$(meson --version)" == "${meson_version}" ]] \
+        || die "pinned Meson preflight failed: expected ${meson_version}, got $(meson --version 2>&1)"
+    echo "Pinned Meson preflight passed: $(meson --version)"
+}
 
 run_repo_sync() {
     local sync_jobs="$1" sync_pid
@@ -46,6 +82,7 @@ out_dir_relative="${out_dir#"${android_dir}/"}"
 python3 "${repo_root}/scripts/validate-lock.py" "${lock_file}"
 
 mkdir -p "${android_dir}" "${out_dir}" "${artifact_dir}" "${manifest_cache_dir}"
+prepare_pinned_meson
 lock_sha="$(sha256sum "${lock_file}" | cut -d' ' -f1)"
 manifest_repo="${manifest_cache_dir}/${lock_sha}"
 if ! git -C "${manifest_repo}" rev-parse --verify HEAD >/dev/null 2>&1; then
