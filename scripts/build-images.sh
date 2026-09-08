@@ -70,6 +70,26 @@ run_repo_sync() {
     wait "${sync_pid}"
 }
 
+run_build_with_heartbeat() {
+    local target="$1" build_pid started_at
+    shift
+
+    started_at="${SECONDS}"
+    "$@" &
+    build_pid=$!
+    while kill -0 "${build_pid}" 2>/dev/null; do
+        for _ in {1..60}; do
+            sleep 5
+            kill -0 "${build_pid}" 2>/dev/null || break
+        done
+        if kill -0 "${build_pid}" 2>/dev/null; then
+            echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Android build is active: ${target}; elapsed $(((SECONDS - started_at) / 60)) minute(s)"
+            ps -o pid=,etime=,%cpu=,%mem= -p "${build_pid}" || true
+        fi
+    done
+    wait "${build_pid}"
+}
+
 for command in repo git python3 sha256sum; do
     command -v "${command}" >/dev/null || die "required command missing: ${command}"
 done
@@ -151,7 +171,7 @@ for target in "${targets[@]}"; do
     lunch "${target}"
     set -u
     echo "Building system, vendor and SPDX outputs for ${target}"
-    m -j"${jobs}" systemimage vendorimage sbom
+    run_build_with_heartbeat "${target}" m -j"${jobs}" systemimage vendorimage sbom
 
     case "${target}" in
         *x86_64*) target_artifacts="${artifact_dir}/x86_64" ;;
