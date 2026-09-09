@@ -242,6 +242,12 @@ for target in "${targets[@]}"; do
     if [[ -s "${sbom_dir}/sbom-gen-report.txt" ]]; then
         install -m 0644 "${sbom_dir}/sbom-gen-report.txt" "${target_artifacts}/sbom-gen-report.txt"
     fi
+    for partition in system vendor; do
+        notice="${OUT}/${partition}/etc/NOTICE.xml.gz"
+        [[ -s "${notice}" ]] \
+            || die "Android ${partition} NOTICE archive was not generated for ${target}"
+        install -m 0644 "${notice}" "${target_artifacts}/NOTICE-${partition}.xml.gz"
+    done
     find "${OUT}" -maxdepth 1 -type f -name 'installed-files*.txt' \
         -exec install -m 0644 -t "${target_artifacts}" {} +
 done
