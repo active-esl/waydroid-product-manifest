@@ -175,7 +175,7 @@ fi
 printf '%s\n' "${lock_sha}" > .repo/aesl-source-lock.sha256
 
 echo "Running the SELinux production gate"
-python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py"
+python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py" --production
 echo "Applying the pinned Waydroid patch series"
 run_with_heartbeat "Waydroid patch application" \
     timeout --foreground --kill-after=60s 30m \
