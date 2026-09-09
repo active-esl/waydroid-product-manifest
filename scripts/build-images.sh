@@ -95,12 +95,13 @@ PY
 }
 
 run_repo_sync() {
-    local sync_jobs="$1" sync_pid
+    local sync_jobs="$1" sync_pid sync_status
     shift
 
-    GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
+    setsid env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
         repo sync -c --no-tags --fail-fast --force-checkout -d -j"${sync_jobs}" "$@" &
     sync_pid=$!
+    trap 'kill -TERM -- "-${sync_pid}" 2>/dev/null || true' INT TERM
     while kill -0 "${sync_pid}" 2>/dev/null; do
         for _ in {1..60}; do
             sleep 5
@@ -110,16 +111,19 @@ run_repo_sync() {
             echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) locked repo sync is still active (${sync_jobs} job(s))"
         fi
     done
-    wait "${sync_pid}"
+    if wait "${sync_pid}"; then sync_status=0; else sync_status=$?; fi
+    trap - INT TERM
+    return "${sync_status}"
 }
 
 run_with_heartbeat() {
-    local stage="$1" build_pid started_at
+    local stage="$1" build_pid build_status started_at
     shift
 
     started_at="${SECONDS}"
-    "$@" &
+    setsid "$@" &
     build_pid=$!
+    trap 'kill -TERM -- "-${build_pid}" 2>/dev/null || true' INT TERM
     while kill -0 "${build_pid}" 2>/dev/null; do
         for _ in {1..60}; do
             sleep 5
@@ -130,7 +134,9 @@ run_with_heartbeat() {
             ps -o pid=,etime=,%cpu=,%mem= -p "${build_pid}" || true
         fi
     done
-    wait "${build_pid}"
+    if wait "${build_pid}"; then build_status=0; else build_status=$?; fi
+    trap - INT TERM
+    return "${build_status}"
 }
 
 for command in repo git python3 realpath sha256sum stat timeout ps; do
