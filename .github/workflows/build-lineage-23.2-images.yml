@@ -2,6 +2,15 @@ name: Build locked Android 16 images
 
 on:
   workflow_dispatch:
+    inputs:
+      imx8mm_variant:
+        description: i.MX8MM build variant; user is the production-gated release path
+        required: true
+        default: userdebug
+        type: choice
+        options:
+          - userdebug
+          - user
 
 permissions:
   contents: read
@@ -36,6 +45,7 @@ jobs:
           ANDROID_MANIFEST_CACHE_DIR: /yocto/android-16-manifests
           OUTPUT_DIR: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
           JOBS: "8"
+          IMX8MM_BUILD_VARIANT: ${{ inputs.imx8mm_variant }}
         run: scripts/build-images.sh
       - uses: actions/upload-artifact@v4
         with:

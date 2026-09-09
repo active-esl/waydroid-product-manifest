@@ -12,9 +12,14 @@ meson_version="1.7.2"
 meson_sha256="82c6818dc81743c96de3a458f06175776ebfde4081195ea31ea6971838f25e38"
 meson_url="https://files.pythonhosted.org/packages/e5/2b/46bda4ef5a7ae4135dbfe27fc0368c44e5a349a897a54fdf2cedb8dcb66e/meson-1.7.2-py3-none-any.whl"
 meson_tool_dir="/yocto/android-ci-tools/meson-${meson_version}"
+imx8mm_build_variant="${IMX8MM_BUILD_VARIANT:-userdebug}"
+case "${imx8mm_build_variant}" in
+    user|userdebug) ;;
+    *) echo "IMX8MM_BUILD_VARIANT must be user or userdebug" >&2; exit 1 ;;
+esac
 targets=(
     lineage_waydroid_x86_64-bp4a-userdebug
-    lineage_waydroid_aesl_2gb_arm64_only-bp4a-userdebug
+    "lineage_waydroid_aesl_2gb_arm64_only-bp4a-${imx8mm_build_variant}"
 )
 
 die() { echo "$*" >&2; exit 1; }
@@ -174,8 +179,13 @@ if ! run_repo_sync "${jobs}" --local-only; then
 fi
 printf '%s\n' "${lock_sha}" > .repo/aesl-source-lock.sha256
 
-echo "Running the SELinux production gate"
-python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py" --production
+if [[ "${imx8mm_build_variant}" == user ]]; then
+    echo "Running the SELinux production gate"
+    python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py" --production
+else
+    echo "Inventorying the open SELinux runtime exception for integration output"
+    python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py"
+fi
 echo "Applying the pinned Waydroid patch series"
 run_with_heartbeat "Waydroid patch application" \
     timeout --foreground --kill-after=60s 30m \

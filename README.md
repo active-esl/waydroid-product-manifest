@@ -34,6 +34,10 @@ i.MX8MM ARM64-only target second, generates an SPDX SBOM for each, and records
 checksums and immutable build metadata with the images. Development
 `userdebug` output is evidence for integration only; a production release must
 also pass the `user` target and the board acceptance procedure.
+Select the `user` i.MX8MM variant when manually dispatching the image workflow;
+that path invokes the blocking runtime-SELinux exception decision as well as
+the normal neverallow build checks. The default `userdebug` path inventories
+the exception but cannot produce production-approved release evidence.
 
 Google applications, Widevine, native-translation prebuilts, Android TV
 Settings and optional Redroid prebuilts are excluded from the AESL Vanilla
