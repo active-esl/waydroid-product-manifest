@@ -210,12 +210,16 @@ for target in "${targets[@]}"; do
     mkdir -p "${target_artifacts}"
     install -m 0644 "${OUT}/system.img" "${target_artifacts}/system.img"
     install -m 0644 "${OUT}/vendor.img" "${target_artifacts}/vendor.img"
-    [[ -s "${OUT}/sbom.spdx.json" ]] \
+    sbom_dir="${out_dir}/soong/sbom/${TARGET_PRODUCT:?TARGET_PRODUCT is not set}"
+    [[ -s "${sbom_dir}/sbom.spdx.json" ]] \
         || die "Android SPDX JSON SBOM was not generated for ${target}"
-    python3 -m json.tool "${OUT}/sbom.spdx.json" >/dev/null
-    install -m 0644 "${OUT}/sbom.spdx.json" "${target_artifacts}/sbom.spdx.json"
-    if [[ -s "${OUT}/sbom.spdx" ]]; then
-        install -m 0644 "${OUT}/sbom.spdx" "${target_artifacts}/sbom.spdx"
+    python3 -m json.tool "${sbom_dir}/sbom.spdx.json" >/dev/null
+    install -m 0644 "${sbom_dir}/sbom.spdx.json" "${target_artifacts}/sbom.spdx.json"
+    if [[ -s "${sbom_dir}/sbom.spdx" ]]; then
+        install -m 0644 "${sbom_dir}/sbom.spdx" "${target_artifacts}/sbom.spdx"
+    fi
+    if [[ -s "${sbom_dir}/sbom-gen-report.txt" ]]; then
+        install -m 0644 "${sbom_dir}/sbom-gen-report.txt" "${target_artifacts}/sbom-gen-report.txt"
     fi
     find "${OUT}" -maxdepth 1 -type f -name 'installed-files*.txt' \
         -exec install -m 0644 -t "${target_artifacts}" {} +
