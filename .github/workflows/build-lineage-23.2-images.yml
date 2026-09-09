@@ -12,12 +12,13 @@ on:
           - userdebug
           - user
       build_scope:
-        description: Build both compatibility and board images, or resume at i.MX8MM only
+        description: Build both images, or rebuild only one target
         required: true
         default: all
         type: choice
         options:
           - all
+          - x86_64
           - imx8mm
 
 permissions:
