@@ -250,6 +250,7 @@ install -m 0644 "${lock_file}" "${artifact_dir}/source-manifest.xml"
 python3 "${repo_root}/scripts/write-build-info.py" \
     --output "${artifact_dir}/build-info.json" \
     --source-lock "${lock_file}" \
+    --imx8mm-variant "${imx8mm_build_variant}" \
     --targets "${targets[@]}"
 system_sha=$(sha256sum "${artifact_dir}/imx8mm/system.img" | cut -d' ' -f1)
 vendor_sha=$(sha256sum "${artifact_dir}/imx8mm/vendor.img" | cut -d' ' -f1)
