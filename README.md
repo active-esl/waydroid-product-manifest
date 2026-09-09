@@ -43,6 +43,10 @@ the exception but cannot produce production-approved release evidence.
 SELinux gate mode so the Yocto host build can reject an integration artifact
 when producing a production image.
 
+After the x86_64 lane has already passed, select the `imx8mm` build scope to
+resume a failed board-image build without repeating the compatibility lane.
+The normal release-validation scope remains `all`.
+
 Google applications, Widevine, native-translation prebuilts, Android TV
 Settings and optional Redroid prebuilts are excluded from the AESL Vanilla
 source graph. Licence verification remains a release gate before the first

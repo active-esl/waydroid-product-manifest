@@ -11,6 +11,14 @@ on:
         options:
           - userdebug
           - user
+      build_scope:
+        description: Build both compatibility and board images, or resume at i.MX8MM only
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - imx8mm
 
 permissions:
   contents: read
@@ -38,7 +46,7 @@ jobs:
             exit 1
           fi
           df -h / /yocto
-      - name: Build x86_64 compatibility and i.MX8MM images
+      - name: Build selected Android image scope
         env:
           ANDROID_WORKSPACE: /yocto/android-16-source
           ANDROID_OUT_DIR: /yocto/android-16-source/out
@@ -46,6 +54,7 @@ jobs:
           OUTPUT_DIR: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
           JOBS: "8"
           IMX8MM_BUILD_VARIANT: ${{ inputs.imx8mm_variant }}
+          BUILD_SCOPE: ${{ inputs.build_scope }}
         run: scripts/build-images.sh
       - uses: actions/upload-artifact@v4
         with:

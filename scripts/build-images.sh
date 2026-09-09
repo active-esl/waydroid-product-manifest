@@ -13,14 +13,23 @@ meson_sha256="82c6818dc81743c96de3a458f06175776ebfde4081195ea31ea6971838f25e38"
 meson_url="https://files.pythonhosted.org/packages/e5/2b/46bda4ef5a7ae4135dbfe27fc0368c44e5a349a897a54fdf2cedb8dcb66e/meson-1.7.2-py3-none-any.whl"
 meson_tool_dir="/yocto/android-ci-tools/meson-${meson_version}"
 imx8mm_build_variant="${IMX8MM_BUILD_VARIANT:-userdebug}"
+build_scope="${BUILD_SCOPE:-all}"
 case "${imx8mm_build_variant}" in
     user|userdebug) ;;
     *) echo "IMX8MM_BUILD_VARIANT must be user or userdebug" >&2; exit 1 ;;
 esac
-targets=(
-    lineage_waydroid_x86_64-bp4a-userdebug
-    "lineage_waydroid_aesl_2gb_arm64_only-bp4a-${imx8mm_build_variant}"
-)
+case "${build_scope}" in
+    all)
+        targets=(
+            lineage_waydroid_x86_64-bp4a-userdebug
+            "lineage_waydroid_aesl_2gb_arm64_only-bp4a-${imx8mm_build_variant}"
+        )
+        ;;
+    imx8mm)
+        targets=("lineage_waydroid_aesl_2gb_arm64_only-bp4a-${imx8mm_build_variant}")
+        ;;
+    *) echo "BUILD_SCOPE must be all or imx8mm" >&2; exit 1 ;;
+esac
 
 die() { echo "$*" >&2; exit 1; }
 
