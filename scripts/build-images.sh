@@ -99,7 +99,7 @@ run_repo_sync() {
     shift
 
     setsid env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
-        repo sync -c --no-tags --fail-fast --force-checkout -d -j"${sync_jobs}" "$@" &
+        repo sync -c --no-tags --fail-fast --force-checkout --force-sync -d -j"${sync_jobs}" "$@" &
     sync_pid=$!
     trap 'kill -TERM -- "-${sync_pid}" 2>/dev/null || true' INT TERM
     while kill -0 "${sync_pid}" 2>/dev/null; do
