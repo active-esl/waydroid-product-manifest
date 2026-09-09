@@ -116,7 +116,7 @@ run_with_heartbeat() {
     wait "${build_pid}"
 }
 
-for command in repo git python3 sha256sum timeout ps; do
+for command in repo git python3 realpath sha256sum stat timeout ps; do
     command -v "${command}" >/dev/null || die "required command missing: ${command}"
 done
 [[ "${android_dir}" == /yocto/* ]] || die "ANDROID_WORKSPACE must be under /yocto"
@@ -186,7 +186,18 @@ run_with_heartbeat "Waydroid patch application" \
 # physical location remains under /yocto/android-16-source.
 export OUT_DIR="${out_dir_relative}"
 unset OUT_DIR_COMMON_BASE
-export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "${repo_root}" show -s --format=%ct HEAD)}"
+if [[ -z "${SOURCE_DATE_EPOCH:-}" ]]; then
+    lock_relative="$(realpath --relative-to="${repo_root}" "${lock_file}")"
+    if [[ "${lock_relative}" != ../* ]]; then
+        source_epoch="$(git -C "${repo_root}" log -1 --format=%ct -- "${lock_relative}")"
+    fi
+    source_epoch="${source_epoch:-$(stat -c %Y "${lock_file}")}"
+    [[ "${source_epoch}" =~ ^[0-9]+$ ]] \
+        || die "could not derive SOURCE_DATE_EPOCH from the reviewed source lock"
+    export SOURCE_DATE_EPOCH="${source_epoch}"
+else
+    export SOURCE_DATE_EPOCH
+fi
 # Android's envsetup is not nounset-safe.
 set +u
 # shellcheck disable=SC1091
