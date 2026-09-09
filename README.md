@@ -47,6 +47,25 @@ After the x86_64 lane has already passed, select the `imx8mm` build scope to
 resume a failed board-image build without repeating the compatibility lane.
 The normal release-validation scope remains `all`.
 
+## Framework x86_64 smoke test
+
+Extract the completed workflow's `x86_64/system.img` and `vendor.img` into a
+versioned local directory, then point `/etc/waydroid-extra/images` at that
+directory. Waydroid 1.6.x discovers custom preinstalled images at this fixed
+path; do not pass the local directory to `waydroid init -i`, because `-i`
+selects an OTA channel rather than an image path.
+
+After starting the container and user session, run:
+
+```sh
+./scripts/framework-x86-runtime-check.sh
+```
+
+The check records image hashes and compact host/Android diagnostics, requires
+Android 16 to finish boot, verifies the AIDL graphics allocator and
+SurfaceFlinger GLES state, and rejects common software-rendering fallbacks.
+Its timestamped evidence directory is ignored by Git.
+
 Google applications, Widevine, native-translation prebuilts, Android TV
 Settings and optional Redroid prebuilts are excluded from the AESL Vanilla
 source graph. Licence verification remains a release gate before the first
