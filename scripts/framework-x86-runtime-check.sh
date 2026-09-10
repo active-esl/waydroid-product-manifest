@@ -29,13 +29,39 @@ if command -v glxinfo >/dev/null; then
     glxinfo -B > "${evidence_dir}/host-glxinfo.txt" 2>&1 || true
 fi
 
-pkexec waydroid shell getprop > "${evidence_dir}/android-properties.txt"
-pkexec waydroid shell service list > "${evidence_dir}/android-services.txt"
-pkexec waydroid shell dumpsys SurfaceFlinger > "${evidence_dir}/surfaceflinger.txt"
+runtime_dump="${evidence_dir}/android-runtime.txt"
+pkexec /bin/sh -c '
+    printf "__PROPERTIES__\n"
+    waydroid shell getprop
+    printf "__SERVICES__\n"
+    waydroid shell service list
+    printf "__SURFACEFLINGER__\n"
+    waydroid shell dumpsys SurfaceFlinger
+    printf "__ACONFIG_METADATA__\n"
+    waydroid shell ls -l \
+        /metadata/aconfig/maps/system.package.map \
+        /metadata/aconfig/maps/system.flag.map
+' > "${runtime_dump}"
+
+awk '
+    /^__PROPERTIES__$/ { section="properties"; next }
+    /^__SERVICES__$/ { section="services"; next }
+    /^__SURFACEFLINGER__$/ { section="surfaceflinger"; next }
+    /^__ACONFIG_METADATA__$/ { section="aconfig"; next }
+    section == "properties" { print > properties }
+    section == "services" { print > services }
+    section == "surfaceflinger" { print > surfaceflinger }
+    section == "aconfig" { print > aconfig }
+' properties="${evidence_dir}/android-properties.txt" \
+  services="${evidence_dir}/android-services.txt" \
+  surfaceflinger="${evidence_dir}/surfaceflinger.txt" \
+  aconfig="${evidence_dir}/aconfig-metadata.txt" \
+  "${runtime_dump}"
 
 properties="${evidence_dir}/android-properties.txt"
 services="${evidence_dir}/android-services.txt"
 surfaceflinger="${evidence_dir}/surfaceflinger.txt"
+aconfig="${evidence_dir}/aconfig-metadata.txt"
 
 grep -Fq '[sys.boot_completed]: [1]' "${properties}" \
     || die "Android did not complete boot"
@@ -45,6 +71,10 @@ grep -Fq '[init.svc.vendor.graphics.allocator]: [running]' "${properties}" \
     || die "AIDL graphics allocator service is not running"
 grep -Fq 'android.hardware.graphics.allocator.IAllocator/default' "${services}" \
     || die "AIDL graphics allocator is not registered"
+grep -Fq '/metadata/aconfig/maps/system.package.map' "${aconfig}" \
+    || die "Android 16 aconfig metadata was not initialized"
+grep -Fq '/metadata/aconfig/maps/system.flag.map' "${aconfig}" \
+    || die "Android 16 aconfig metadata was not initialized"
 grep -Eiq 'GLES|OpenGL ES' "${surfaceflinger}" \
     || die "SurfaceFlinger did not report a GLES renderer"
 
