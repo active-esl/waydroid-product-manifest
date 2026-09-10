@@ -38,7 +38,7 @@ pkexec /bin/sh -c '
     printf "__SURFACEFLINGER__\n"
     waydroid shell dumpsys SurfaceFlinger
     printf "__ACONFIG_METADATA__\n"
-    waydroid shell ls -l \
+    waydroid shell -- ls -l \
         /metadata/aconfig/maps/system.package.map \
         /metadata/aconfig/maps/system.flag.map
 ' > "${runtime_dump}"
