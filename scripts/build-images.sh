@@ -176,6 +176,10 @@ done
 python3 "${repo_root}/scripts/validate-lock.py" "${lock_file}"
 
 mkdir -p "${android_dir}" "${out_dir}" "${imx8mm_out_dir}" "${artifact_dir}" "${manifest_cache_dir}"
+source_cache_evidence="${artifact_dir}/source-cache-evidence.txt"
+target_cache_evidence="${artifact_dir}/target-cache-evidence.tsv"
+printf 'phase\ttarget\tcache_present_before\tbytes_before\tmtime_before\tbytes_after\tmtime_after\telapsed_seconds\n' \
+    > "${target_cache_evidence}"
 prepare_pinned_meson
 lock_sha="$(sha256sum "${lock_file}" | cut -d' ' -f1)"
 manifest_repo="${manifest_cache_dir}/${lock_sha}"
@@ -238,13 +242,16 @@ fi
 
 if [[ "${full_sync}" == true ]]; then
     echo "Restoring the complete locked source tree from the /yocto object cache"
+    source_sync_mode="full"
     sync_locked_sources
 elif (( ${#changed_projects[@]} > 0 )); then
     echo "Synchronizing ${#changed_projects[@]} project(s) changed by the immutable lock"
+    source_sync_mode="delta"
     printf '  %s\n' "${changed_projects[@]}"
     sync_locked_sources "${changed_projects[@]}"
 else
     echo "No project revisions changed; preserving the incremental source worktree"
+    source_sync_mode="reused"
 fi
 printf '%s\n' "${lock_sha}" > .repo/aesl-source-lock.sha256
 install -m 0644 "${lock_file}" "${previous_lock}"
@@ -301,6 +308,14 @@ if (( ${#patch_projects_to_apply[@]} > 0 )); then
 else
     echo "Patch state already matches; preserving patched source projects"
 fi
+printf '%s\n' \
+    "lock_sha256=${lock_sha}" \
+    "previous_lock_sha256=${cached_lock:-none}" \
+    "source_sync_mode=${source_sync_mode}" \
+    "changed_projects=${#changed_projects[@]}" \
+    "patch_projects_applied=${#patch_projects_to_apply[@]}" \
+    "android_workspace=${android_dir}" \
+    > "${source_cache_evidence}"
 for patch_state in "${patch_states[@]}"; do
     IFS=$'\t' read -r patch_project patch_digest <<< "${patch_state}"
     patch_marker="${patch_state_dir}/${patch_project}.sha256"
@@ -340,6 +355,18 @@ for target in "${targets[@]}"; do
     # target-specific path relative to TOP while its physical location remains
     # under /yocto/android-16-source.
     export OUT_DIR="${target_out_dir#"${android_dir}/"}"
+    target_ninja_log="${target_out_dir}/.ninja_log"
+    cache_present_before=false
+    bytes_before=0
+    mtime_before=0
+    if [[ -f "${target_ninja_log}" ]]; then
+        cache_present_before=true
+        read -r bytes_before mtime_before < <(stat -c '%s %Y' "${target_ninja_log}")
+    fi
+    target_started_at="$(date +%s)"
+    printf 'start\t%s\t%s\t%s\t%s\t-\t-\t0\n' \
+        "${target}" "${cache_present_before}" "${bytes_before}" "${mtime_before}" \
+        >> "${target_cache_evidence}"
     echo "Configuring Android target ${target}"
     set +u
     lunch "${target}"
@@ -347,6 +374,12 @@ for target in "${targets[@]}"; do
     echo "Building system, vendor and SPDX outputs for ${target}"
     run_with_heartbeat "Android image build ${target}" \
         m -j"${jobs}" systemimage vendorimage sbom
+    target_finished_at="$(date +%s)"
+    read -r bytes_after mtime_after < <(stat -c '%s %Y' "${target_ninja_log}")
+    printf 'complete\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "${target}" "${cache_present_before}" "${bytes_before}" "${mtime_before}" \
+        "${bytes_after}" "${mtime_after}" "$((target_finished_at - target_started_at))" \
+        >> "${target_cache_evidence}"
 
     mkdir -p "${target_artifacts}"
     install -m 0644 "${OUT}/system.img" "${target_artifacts}/system.img"
