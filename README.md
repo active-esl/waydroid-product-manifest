@@ -61,6 +61,20 @@ After starting the container and user session, run:
 ./scripts/framework-x86-runtime-check.sh
 ```
 
+Android 16 changed both the service-manager wire protocol and Waydroid's
+platform interface descriptor. Waydroid 1.6.2 and libgbinder 1.1.43 cannot
+open the UI directly. Prepare the reviewed project-local host runtime once,
+then use its compatibility launcher for the session and UI:
+
+```sh
+./scripts/prepare-waydroid-a16-host.sh
+systemd-run --user --collect "$PWD/scripts/waydroid-a16-host" session start
+./scripts/waydroid-a16-host show-full-ui
+```
+
+The preparation script pins libgbinder 1.1.52 and libglibutil 1.0.82 by exact
+commit, installs nothing system-wide, and requires no elevated privileges.
+
 The check records image hashes and compact host/Android diagnostics, requires
 Android 16 to finish boot, verifies the AIDL graphics allocator and
 SurfaceFlinger GLES state, and rejects common software-rendering fallbacks.

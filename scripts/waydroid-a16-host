@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+workspace_dir=$(CDPATH= cd -- "$script_dir/../.." && pwd)
+runtime_root=${WAYDROID_A16_RUNTIME_ROOT:-"$workspace_dir/waydroid-host-runtime"}
+gbinder_lib="$runtime_root/libgbinder-src/build/release/libgbinder.so.1"
+glibutil_lib="$runtime_root/libglibutil-src/build/release/libglibutil.so.1"
+
+if [ ! -e "$gbinder_lib" ] || [ ! -e "$glibutil_lib" ]; then
+    echo "Android 16 host runtime is missing; run $script_dir/prepare-waydroid-a16-host.sh" >&2
+    exit 1
+fi
+
+export LD_LIBRARY_PATH="$runtime_root/libgbinder-src/build/release:$runtime_root/libglibutil-src/build/release${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec /usr/bin/python3 "$script_dir/waydroid-a16-host.py" "$@"
