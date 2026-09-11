@@ -54,6 +54,7 @@ jobs:
           ANDROID_MANIFEST_CACHE_DIR: /yocto/android-16-manifests
           OUTPUT_DIR: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
           JOBS: "8"
+          SOONG_GOMEMLIMIT: 28GiB
           IMX8MM_BUILD_VARIANT: ${{ inputs.imx8mm_variant }}
           BUILD_SCOPE: ${{ inputs.build_scope }}
         run: scripts/build-images.sh

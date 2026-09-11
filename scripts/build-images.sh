@@ -206,6 +206,16 @@ else
 fi
 
 previous_lock="${android_dir}/.repo/aesl-source-lock.xml"
+comparison_lock="${previous_lock}"
+# Older revisions recorded only the lock digest.  Their Git-backed manifest
+# cache still contains the exact XML, so use it to calculate a project delta
+# instead of needlessly resetting all 1,181 projects during migration.
+if [[ ! -s "${comparison_lock}" \
+    && "${cached_lock}" =~ ^[0-9a-f]{64}$ \
+    && -s "${manifest_cache_dir}/${cached_lock}/default.xml" ]]; then
+    comparison_lock="${manifest_cache_dir}/${cached_lock}/default.xml"
+    echo "Recovering the previous immutable lock from the /yocto manifest cache"
+fi
 full_sync=false
 changed_projects=()
 if [[ "${force_full_sync}" == true || "${force_full_sync}" == 1 ]]; then
@@ -213,9 +223,9 @@ if [[ "${force_full_sync}" == true || "${force_full_sync}" == 1 ]]; then
     full_sync=true
 elif [[ "${cached_lock}" == "${lock_sha}" ]]; then
     echo "Source worktree already matches the immutable lock; skipping repo sync"
-elif [[ -s "${previous_lock}" ]]; then
+elif [[ -s "${comparison_lock}" ]]; then
     mapfile -t changed_projects \
-        < <(python3 "${repo_root}/scripts/lock-delta.py" "${previous_lock}" "${lock_file}")
+        < <(python3 "${repo_root}/scripts/lock-delta.py" "${comparison_lock}" "${lock_file}")
     if [[ "${changed_projects[0]:-}" == __FULL__ ]]; then
         full_sync=true
         changed_projects=()
