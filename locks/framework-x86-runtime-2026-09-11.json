@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "validation_date": "2026-09-11",
+  "result": "pass",
+  "platform": "Framework laptop x86_64",
+  "android_release": "16",
+  "lineage_release": "23.2",
+  "source_lock": {
+    "path": "locks/lineage-23.2-lock.xml",
+    "sha256": "df368a4b4a8242b002246e3d674302c41ca891c73b4632747c4ed0a4a7a69fca"
+  },
+  "github_actions": {
+    "run_id": 34598097862,
+    "run_attempt": 1,
+    "artifact": "aesl-lineage-23.2-34598097862-1",
+    "url": "https://github.com/active-esl/waydroid-product-manifest/actions/runs/34598097862"
+  },
+  "images": {
+    "system_img_sha256": "8a911463c76fa6e2a6c6b9ea4a1fbbf31fd1544e8dd8d114dddf741f9eb14f87",
+    "vendor_img_sha256": "ec20cdc717a46f05b18ce67d0e2d46584ea1366e1e5b64567df30b64d41af42b"
+  },
+  "host_runtime": {
+    "waydroid": "1.6.2",
+    "libgbinder": {
+      "version": "1.1.52",
+      "commit": "e906afcffbfa51b7fbefe042a13b933d9e8dfdd9"
+    },
+    "libglibutil": {
+      "version": "1.0.82",
+      "commit": "cccc4aa8f1745096f6feb66da7883b35055d9423"
+    },
+    "service_manager_protocol": "aidl6",
+    "platform_interface": "id.waydro.waydroid.IPlatform"
+  },
+  "acceptance": {
+    "boot_completed": true,
+    "android_version": "16",
+    "ui_rendered": true,
+    "graphics_allocator": "AIDL minigbm",
+    "egl": "mesa",
+    "software_renderer_rejected": true,
+    "check": "scripts/framework-x86-runtime-check.sh"
+  }
+}

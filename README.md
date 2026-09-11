@@ -80,6 +80,11 @@ Android 16 to finish boot, verifies the AIDL graphics allocator and
 SurfaceFlinger GLES state, and rejects common software-rendering fallbacks.
 Its timestamped evidence directory is ignored by Git.
 
+The first proven image/host combination is recorded immutably in
+`locks/framework-x86-runtime-2026-09-11.json`. NXP deployment must follow
+`docs/nxp-board-bringup.md`; in particular, i.MX8MM and i.MX95 have separate
+vendor-image and hardware-acceleration acceptance gates.
+
 Google applications, Widevine, native-translation prebuilts, Android TV
 Settings and optional Redroid prebuilts are excluded from the AESL Vanilla
 source graph. Licence verification remains a release gate before the first
