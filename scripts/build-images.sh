@@ -4,9 +4,11 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 android_dir="${ANDROID_WORKSPACE:-/yocto/android-16-source}"
 out_dir="${ANDROID_OUT_DIR:-${android_dir}/out}"
+imx8mm_out_dir="${ANDROID_IMX8MM_OUT_DIR:-${android_dir}/out-imx8mm}"
 artifact_dir="${OUTPUT_DIR:-/yocto/android-16-artifacts/local}"
 manifest_cache_dir="${ANDROID_MANIFEST_CACHE_DIR:-/yocto/android-16-manifests}"
 lock_file="${SOURCE_LOCK:-${repo_root}/locks/lineage-23.2-lock.xml}"
+source_date_epoch_file="${SOURCE_DATE_EPOCH_FILE:-${repo_root}/locks/lineage-23.2-source-date-epoch}"
 jobs="${JOBS:-8}"
 meson_version="1.7.2"
 meson_sha256="82c6818dc81743c96de3a458f06175776ebfde4081195ea31ea6971838f25e38"
@@ -14,6 +16,7 @@ meson_url="https://files.pythonhosted.org/packages/e5/2b/46bda4ef5a7ae4135dbfe27
 meson_tool_dir="/yocto/android-ci-tools/meson-${meson_version}"
 imx8mm_build_variant="${IMX8MM_BUILD_VARIANT:-userdebug}"
 build_scope="${BUILD_SCOPE:-all}"
+force_full_sync="${FORCE_FULL_SYNC:-false}"
 case "${imx8mm_build_variant}" in
     user|userdebug) ;;
     *) echo "IMX8MM_BUILD_VARIANT must be user or userdebug" >&2; exit 1 ;;
@@ -139,18 +142,38 @@ run_with_heartbeat() {
     return "${build_status}"
 }
 
-for command in repo git python3 realpath sha256sum stat timeout ps; do
+sync_locked_sources() {
+    local attempt sync_jobs="${jobs}"
+    local -a projects=("$@")
+
+    if run_repo_sync "${sync_jobs}" --local-only "${projects[@]}"; then
+        return 0
+    fi
+    echo "Local object cache is incomplete; fetching only missing locked revisions"
+    for attempt in 1 2 3 4; do
+        if run_repo_sync "${sync_jobs}" "${projects[@]}"; then
+            return 0
+        fi
+        [[ "${attempt}" == 4 ]] && die "repo sync failed after four attempts"
+        (( sync_jobs > 1 )) && sync_jobs=$((sync_jobs / 2))
+        echo "locked repo sync attempt ${attempt} failed; retrying with ${sync_jobs} job(s)" >&2
+    done
+}
+
+for command in repo git python3 sha256sum timeout ps; do
     command -v "${command}" >/dev/null || die "required command missing: ${command}"
 done
 [[ "${android_dir}" == /yocto/* ]] || die "ANDROID_WORKSPACE must be under /yocto"
 [[ "${out_dir}" == "${android_dir}"/* ]] || die "ANDROID_OUT_DIR must be inside ANDROID_WORKSPACE"
-out_dir_relative="${out_dir#"${android_dir}/"}"
+[[ "${imx8mm_out_dir}" == "${android_dir}"/* ]] \
+    || die "ANDROID_IMX8MM_OUT_DIR must be inside ANDROID_WORKSPACE"
 [[ "${artifact_dir}" == /yocto/* ]] || die "OUTPUT_DIR must be under /yocto"
 [[ "${manifest_cache_dir}" == /yocto/* ]] || die "ANDROID_MANIFEST_CACHE_DIR must be under /yocto"
 [[ -s "${lock_file}" ]] || die "reviewed source lock missing: ${lock_file}"
+[[ -s "${source_date_epoch_file}" ]] || die "stable source-date epoch missing: ${source_date_epoch_file}"
 python3 "${repo_root}/scripts/validate-lock.py" "${lock_file}"
 
-mkdir -p "${android_dir}" "${out_dir}" "${artifact_dir}" "${manifest_cache_dir}"
+mkdir -p "${android_dir}" "${out_dir}" "${imx8mm_out_dir}" "${artifact_dir}" "${manifest_cache_dir}"
 prepare_pinned_meson
 lock_sha="$(sha256sum "${lock_file}" | cut -d' ' -f1)"
 manifest_repo="${manifest_cache_dir}/${lock_sha}"
@@ -182,20 +205,37 @@ else
     repo init -u "${manifest_url}" -b locked -m default.xml --git-lfs
 fi
 
-echo "Restoring exact locked revisions from the local /yocto object cache"
-if ! run_repo_sync "${jobs}" --local-only; then
-    echo "Local object cache is incomplete; fetching only missing locked revisions"
-    sync_jobs="${jobs}"
-    for attempt in 1 2 3 4; do
-        if run_repo_sync "${sync_jobs}"; then
-            break
-        fi
-        [[ "${attempt}" == 4 ]] && die "repo sync failed after four attempts"
-        (( sync_jobs > 1 )) && sync_jobs=$((sync_jobs / 2))
-        echo "locked repo sync attempt ${attempt} failed; retrying with ${sync_jobs} job(s)" >&2
-    done
+previous_lock="${android_dir}/.repo/aesl-source-lock.xml"
+full_sync=false
+changed_projects=()
+if [[ "${force_full_sync}" == true || "${force_full_sync}" == 1 ]]; then
+    echo "A complete source resynchronization was explicitly requested"
+    full_sync=true
+elif [[ "${cached_lock}" == "${lock_sha}" ]]; then
+    echo "Source worktree already matches the immutable lock; skipping repo sync"
+elif [[ -s "${previous_lock}" ]]; then
+    mapfile -t changed_projects \
+        < <(python3 "${repo_root}/scripts/lock-delta.py" "${previous_lock}" "${lock_file}")
+    if [[ "${changed_projects[0]:-}" == __FULL__ ]]; then
+        full_sync=true
+        changed_projects=()
+    fi
+else
+    full_sync=true
+fi
+
+if [[ "${full_sync}" == true ]]; then
+    echo "Restoring the complete locked source tree from the /yocto object cache"
+    sync_locked_sources
+elif (( ${#changed_projects[@]} > 0 )); then
+    echo "Synchronizing ${#changed_projects[@]} project(s) changed by the immutable lock"
+    printf '  %s\n' "${changed_projects[@]}"
+    sync_locked_sources "${changed_projects[@]}"
+else
+    echo "No project revisions changed; preserving the incremental source worktree"
 fi
 printf '%s\n' "${lock_sha}" > .repo/aesl-source-lock.sha256
+install -m 0644 "${lock_file}" "${previous_lock}"
 
 if [[ "${imx8mm_build_variant}" == user ]]; then
     echo "Running the SELinux production gate"
@@ -205,23 +245,54 @@ else
     python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py"
 fi
 echo "Applying the pinned Waydroid patch series"
+patch_root="${android_dir}/vendor/extra/waydroid-patches/base-patches-36"
+patch_state_dir="${android_dir}/.repo/aesl-patch-state"
+patch_projects_file="${android_dir}/.repo/aesl-patch-projects"
+mkdir -p "${patch_state_dir}"
+mapfile -t patch_states \
+    < <(python3 "${repo_root}/scripts/patch-state.py" "${lock_file}" "${patch_root}")
+declare -A desired_patch_projects=()
+declare -A synchronized_projects=()
+for changed_project in "${changed_projects[@]}"; do
+    synchronized_projects["${changed_project}"]=1
+done
+for patch_state in "${patch_states[@]}"; do
+    IFS=$'\t' read -r patch_project patch_digest <<< "${patch_state}"
+    desired_patch_projects["${patch_project}"]=1
+    patch_marker="${patch_state_dir}/${patch_project}.sha256"
+    applied_digest="$(cat "${patch_marker}" 2>/dev/null || true)"
+    if [[ -n "${applied_digest}" && "${applied_digest}" != "${patch_digest}" ]]; then
+        if [[ "${full_sync}" != true && -z "${synchronized_projects[$patch_project]:-}" ]]; then
+            echo "Patch state changed for ${patch_project}; restoring its exact locked base"
+            sync_locked_sources "${patch_project}"
+        fi
+    fi
+done
+if [[ -s "${patch_projects_file}" ]]; then
+    while IFS= read -r previous_patch_project; do
+        [[ -n "${previous_patch_project}" ]] || continue
+        if [[ -z "${desired_patch_projects[$previous_patch_project]:-}" ]]; then
+            echo "Patch series was removed for ${previous_patch_project}; restoring its locked base"
+            sync_locked_sources "${previous_patch_project}"
+        fi
+    done < "${patch_projects_file}"
+fi
 run_with_heartbeat "Waydroid patch application" \
     timeout --foreground --kill-after=60s 30m \
     "${repo_root}/scripts/apply-waydroid-patches-strict.sh" "${android_dir}"
+for patch_state in "${patch_states[@]}"; do
+    IFS=$'\t' read -r patch_project patch_digest <<< "${patch_state}"
+    patch_marker="${patch_state_dir}/${patch_project}.sha256"
+    mkdir -p "$(dirname "${patch_marker}")"
+    printf '%s\n' "${patch_digest}" > "${patch_marker}"
+done
+printf '%s\n' "${!desired_patch_projects[@]}" | sort > "${patch_projects_file}"
 
-# Some Android 16 Soong modules identify host outputs by their leading
-# "out/" component. Keep this path relative to TOP while its validated
-# physical location remains under /yocto/android-16-source.
-export OUT_DIR="${out_dir_relative}"
 unset OUT_DIR_COMMON_BASE
 if [[ -z "${SOURCE_DATE_EPOCH:-}" ]]; then
-    lock_relative="$(realpath --relative-to="${repo_root}" "${lock_file}")"
-    if [[ "${lock_relative}" != ../* ]]; then
-        source_epoch="$(git -C "${repo_root}" log -1 --format=%ct -- "${lock_relative}")"
-    fi
-    source_epoch="${source_epoch:-$(stat -c %Y "${lock_file}")}"
+    source_epoch="$(tr -d '[:space:]' < "${source_date_epoch_file}")"
     [[ "${source_epoch}" =~ ^[0-9]+$ ]] \
-        || die "could not derive SOURCE_DATE_EPOCH from the reviewed source lock"
+        || die "invalid stable SOURCE_DATE_EPOCH: ${source_date_epoch_file}"
     export SOURCE_DATE_EPOCH="${source_epoch}"
 else
     export SOURCE_DATE_EPOCH
@@ -233,6 +304,21 @@ source build/envsetup.sh
 set -u
 
 for target in "${targets[@]}"; do
+    case "${target}" in
+        *x86_64*)
+            target_out_dir="${out_dir}"
+            target_artifacts="${artifact_dir}/x86_64"
+            ;;
+        *aesl_2gb_arm64_only*)
+            target_out_dir="${imx8mm_out_dir}"
+            target_artifacts="${artifact_dir}/imx8mm"
+            ;;
+        *) die "unrecognised target: ${target}" ;;
+    esac
+    # Soong identifies host outputs by their leading out/ component. Keep the
+    # target-specific path relative to TOP while its physical location remains
+    # under /yocto/android-16-source.
+    export OUT_DIR="${target_out_dir#"${android_dir}/"}"
     echo "Configuring Android target ${target}"
     set +u
     lunch "${target}"
@@ -241,15 +327,10 @@ for target in "${targets[@]}"; do
     run_with_heartbeat "Android image build ${target}" \
         m -j"${jobs}" systemimage vendorimage sbom
 
-    case "${target}" in
-        *x86_64*) target_artifacts="${artifact_dir}/x86_64" ;;
-        *aesl_2gb_arm64_only*) target_artifacts="${artifact_dir}/imx8mm" ;;
-        *) die "unrecognised target: ${target}" ;;
-    esac
     mkdir -p "${target_artifacts}"
     install -m 0644 "${OUT}/system.img" "${target_artifacts}/system.img"
     install -m 0644 "${OUT}/vendor.img" "${target_artifacts}/vendor.img"
-    sbom_dir="${out_dir}/soong/sbom/${TARGET_PRODUCT:?TARGET_PRODUCT is not set}"
+    sbom_dir="${target_out_dir}/soong/sbom/${TARGET_PRODUCT:?TARGET_PRODUCT is not set}"
     [[ -s "${sbom_dir}/sbom.spdx.json" ]] \
         || die "Android SPDX JSON SBOM was not generated for ${target}"
     python3 -m json.tool "${sbom_dir}/sbom.spdx.json" >/dev/null

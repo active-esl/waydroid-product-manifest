@@ -93,3 +93,11 @@ Never place them under `/opt/actions-runner/_work` or the runner root volume;
 that filesystem is reserved for the small job checkout, diagnostics and logs.
 Workflows must preflight `/yocto` capacity before starting a source sync or
 build.
+
+The image workflow preserves incremental state deliberately: a repeated lock
+skips `repo sync`, a changed lock synchronizes only changed projects, and each
+patched project is restored only when its locked revision or ordered patch
+series changes. The existing x86_64 cache remains in `out`; i.MX8MM uses the
+separate persistent `out-imx8mm` tree so switching architectures cannot evict
+the other target's intermediates. `lineage-23.2-source-date-epoch` is fixed for
+the release line to prevent lock bookkeeping changes from invalidating Soong.
