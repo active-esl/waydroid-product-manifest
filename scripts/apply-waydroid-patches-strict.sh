@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-android_dir="${1:?usage: apply-waydroid-patches-strict.sh ANDROID_SOURCE_DIR}"
+android_dir="${1:?usage: apply-waydroid-patches-strict.sh ANDROID_SOURCE_DIR [PROJECT ...]}"
+shift
+requested_projects=("$@")
 patch_root="${android_dir}/vendor/extra/waydroid-patches/base-patches-36"
 
 [[ -d "${android_dir}/.repo" ]] || { echo "not an Android repo checkout: ${android_dir}" >&2; exit 1; }
@@ -14,6 +16,17 @@ while IFS= read -r -d '' patch_file; do
     relative="${patch_file#"${patch_root}"/}"
     project="${relative%/*}"
     project_dir="${android_dir}/${project}"
+
+    if (( ${#requested_projects[@]} > 0 )); then
+        selected=false
+        for requested_project in "${requested_projects[@]}"; do
+            if [[ "${project}" == "${requested_project}" ]]; then
+                selected=true
+                break
+            fi
+        done
+        [[ "${selected}" == true ]] || continue
+    fi
 
     [[ -d "${project_dir}/.git" || -f "${project_dir}/.git" ]] || {
         echo "patch target is not a checked-out project: ${project}" >&2

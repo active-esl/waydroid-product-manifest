@@ -263,6 +263,7 @@ mapfile -t patch_states \
     < <(python3 "${repo_root}/scripts/patch-state.py" "${lock_file}" "${patch_root}")
 declare -A desired_patch_projects=()
 declare -A synchronized_projects=()
+patch_projects_to_apply=()
 for changed_project in "${changed_projects[@]}"; do
     synchronized_projects["${changed_project}"]=1
 done
@@ -271,11 +272,13 @@ for patch_state in "${patch_states[@]}"; do
     desired_patch_projects["${patch_project}"]=1
     patch_marker="${patch_state_dir}/${patch_project}.sha256"
     applied_digest="$(cat "${patch_marker}" 2>/dev/null || true)"
-    if [[ -n "${applied_digest}" && "${applied_digest}" != "${patch_digest}" ]]; then
+    if [[ "${full_sync}" == true || "${applied_digest}" != "${patch_digest}" ]]; then
         if [[ "${full_sync}" != true && -z "${synchronized_projects[$patch_project]:-}" ]]; then
             echo "Patch state changed for ${patch_project}; restoring its exact locked base"
             sync_locked_sources "${patch_project}"
+            synchronized_projects["${patch_project}"]=1
         fi
+        patch_projects_to_apply+=("${patch_project}")
     fi
 done
 if [[ -s "${patch_projects_file}" ]]; then
@@ -287,9 +290,15 @@ if [[ -s "${patch_projects_file}" ]]; then
         fi
     done < "${patch_projects_file}"
 fi
-run_with_heartbeat "Waydroid patch application" \
-    timeout --foreground --kill-after=60s 30m \
-    "${repo_root}/scripts/apply-waydroid-patches-strict.sh" "${android_dir}"
+if (( ${#patch_projects_to_apply[@]} > 0 )); then
+    echo "Applying patches for ${#patch_projects_to_apply[@]} changed project(s)"
+    run_with_heartbeat "Waydroid patch application" \
+        timeout --foreground --kill-after=60s 30m \
+        "${repo_root}/scripts/apply-waydroid-patches-strict.sh" \
+        "${android_dir}" "${patch_projects_to_apply[@]}"
+else
+    echo "Patch state already matches; preserving patched source projects"
+fi
 for patch_state in "${patch_states[@]}"; do
     IFS=$'\t' read -r patch_project patch_digest <<< "${patch_state}"
     patch_marker="${patch_state_dir}/${patch_project}.sha256"
