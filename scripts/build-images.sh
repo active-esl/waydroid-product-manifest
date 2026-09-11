@@ -17,6 +17,8 @@ meson_tool_dir="/yocto/android-ci-tools/meson-${meson_version}"
 imx8mm_build_variant="${IMX8MM_BUILD_VARIANT:-userdebug}"
 build_scope="${BUILD_SCOPE:-all}"
 force_full_sync="${FORCE_FULL_SYNC:-false}"
+python3 "${repo_root}/scripts/validate-board-support.py" \
+    "${repo_root}/config/board-support.json"
 case "${imx8mm_build_variant}" in
     user|userdebug) ;;
     *) echo "IMX8MM_BUILD_VARIANT must be user or userdebug" >&2; exit 1 ;;

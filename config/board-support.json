@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "updated": "2026-09-11",
+  "platform": {
+    "android_major": 16,
+    "lineage_version": "23.2",
+    "minimum_support_years": 5,
+    "support_rule": "max(5 years, documented expected product lifetime)",
+    "release_evidence": [
+      "immutable source manifest",
+      "SPDX SBOM",
+      "system and vendor NOTICE archives",
+      "signed image checksums",
+      "board acceptance report",
+      "rollback result"
+    ]
+  },
+  "boards": [
+    {
+      "id": "framework-x86_64",
+      "role": "compatibility-test-only",
+      "android_product": "lineage_waydroid_x86_64",
+      "status": "validated",
+      "cra_product_classification": "not-applicable-development-tool",
+      "support_start": null,
+      "support_end": null,
+      "gpu_stack": "host DRM passthrough",
+      "media_stack": "VA-API/FFmpeg",
+      "vendor_source": "LineageOS/Waydroid lock"
+    },
+    {
+      "id": "imx8mm-custom-2gb",
+      "role": "product-candidate",
+      "android_product": "lineage_waydroid_aesl_2gb_arm64_only",
+      "status": "integration",
+      "cra_product_classification": "pending-final-product-classification",
+      "support_start": null,
+      "support_end": null,
+      "expected_lifetime_years": null,
+      "gpu_stack": "Mesa Etnaviv",
+      "media_stack": "V4L2 Codec2 H.264",
+      "vendor_source": "LineageOS/Waydroid lock",
+      "host_bsp_contract": "Foundries LmP; exact release and kernel ABI pending release baseline"
+    },
+    {
+      "id": "imx95-family",
+      "role": "product-candidate",
+      "android_product": "lineage_waydroid_aesl_imx95_arm64_only",
+      "status": "scaffolded",
+      "cra_product_classification": "pending-final-product-classification",
+      "support_start": null,
+      "support_end": null,
+      "expected_lifetime_years": null,
+      "gpu_stack": "NXP Mali Bionic userspace / matching host kbase ABI",
+      "media_stack": "NXP i.MX Codec2/Hantro",
+      "vendor_source": "NXP android-16.0.0_2.0.0 candidate; proprietary overlay licence review required",
+      "host_bsp_contract": "Foundries LmP NXP BSP; exact release, kernel and Mali ABI pending",
+      "blocked_release_gates": [
+        "obtain and hash NXP android-16.0.0_2.0.0 proprietary overlay",
+        "pin NXP open-source projects in reviewed source lock",
+        "prove dma-buf import across host DPU and Android Mali allocator",
+        "prove GPU and VPU operation without software fallback",
+        "complete memory, suspend/resume and rollback acceptance"
+      ]
+    }
+  ]
+}
