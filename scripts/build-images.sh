@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 android_dir="${ANDROID_WORKSPACE:-/yocto/android-16-source}"
 out_dir="${ANDROID_OUT_DIR:-${android_dir}/out}"
+x86_64_2gb_out_dir="${ANDROID_X86_64_2GB_OUT_DIR:-${android_dir}/out-x86_64-2gb}"
 imx8mm_out_dir="${ANDROID_IMX8MM_OUT_DIR:-${android_dir}/out-imx8mm}"
 artifact_dir="${OUTPUT_DIR:-/yocto/android-16-artifacts/local}"
 manifest_cache_dir="${ANDROID_MANIFEST_CACHE_DIR:-/yocto/android-16-manifests}"
@@ -33,10 +34,13 @@ case "${build_scope}" in
     x86_64)
         targets=(lineage_waydroid_x86_64-bp4a-userdebug)
         ;;
+    x86_64_2gb)
+        targets=(lineage_waydroid_aesl_2gb_x86_64-bp4a-userdebug)
+        ;;
     imx8mm)
         targets=("lineage_waydroid_aesl_2gb_arm64_only-bp4a-${imx8mm_build_variant}")
         ;;
-    *) echo "BUILD_SCOPE must be all, x86_64 or imx8mm" >&2; exit 1 ;;
+    *) echo "BUILD_SCOPE must be all, x86_64, x86_64_2gb or imx8mm" >&2; exit 1 ;;
 esac
 
 die() { echo "$*" >&2; exit 1; }
@@ -167,6 +171,8 @@ for command in repo git python3 sha256sum timeout ps; do
 done
 [[ "${android_dir}" == /yocto/* ]] || die "ANDROID_WORKSPACE must be under /yocto"
 [[ "${out_dir}" == "${android_dir}"/* ]] || die "ANDROID_OUT_DIR must be inside ANDROID_WORKSPACE"
+[[ "${x86_64_2gb_out_dir}" == "${android_dir}"/* ]] \
+    || die "ANDROID_X86_64_2GB_OUT_DIR must be inside ANDROID_WORKSPACE"
 [[ "${imx8mm_out_dir}" == "${android_dir}"/* ]] \
     || die "ANDROID_IMX8MM_OUT_DIR must be inside ANDROID_WORKSPACE"
 [[ "${artifact_dir}" == /yocto/* ]] || die "OUTPUT_DIR must be under /yocto"
@@ -351,6 +357,10 @@ set -u
 
 for target in "${targets[@]}"; do
     case "${target}" in
+        *aesl_2gb_x86_64*)
+            target_out_dir="${x86_64_2gb_out_dir}"
+            target_artifacts="${artifact_dir}/x86_64_2gb"
+            ;;
         *x86_64*)
             target_out_dir="${out_dir}"
             target_artifacts="${artifact_dir}/x86_64"

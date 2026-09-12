@@ -85,6 +85,12 @@ Android 16 to finish boot, verifies the AIDL graphics allocator and
 SurfaceFlinger GLES state, and rejects common software-rendering fallbacks.
 Its timestamped evidence directory is ignored by Git.
 
+For host-side validation of the shared i.MX8MM 2 GB Android policy, dispatch
+the `x86_64_2gb` build scope. It emits the native x86_64 product
+`lineage_waydroid_aesl_2gb_x86_64-userdebug` in a separate persistent output
+tree. Run it with a 2 GiB container cgroup limit; this validates low-memory
+behaviour on the Framework but does not replace i.MX8MM board acceptance.
+
 The first proven image/host combination is recorded immutably in
 `locks/framework-x86-runtime-2026-09-11.json`. NXP deployment must follow
 `docs/nxp-board-bringup.md`; in particular, i.MX8MM and i.MX95 have separate

@@ -19,6 +19,7 @@ on:
         options:
           - all
           - x86_64
+          - x86_64_2gb
           - imx8mm
 
 permissions:
@@ -40,7 +41,7 @@ jobs:
         run: scripts/install-repo-tool.sh
       - name: Preflight CI storage
         run: |
-          install -d /yocto/android-16-source/out /yocto/android-16-artifacts /yocto/android-16-manifests
+          install -d /yocto/android-16-source/out /yocto/android-16-source/out-x86_64-2gb /yocto/android-16-artifacts /yocto/android-16-manifests
           available_kib=$(df --output=avail /yocto | tail -1 | tr -d ' ')
           minimum_kib=$((300 * 1024 * 1024))
           if [ "${available_kib}" -lt "${minimum_kib}" ]; then
@@ -53,6 +54,7 @@ jobs:
         env:
           ANDROID_WORKSPACE: /yocto/android-16-source
           ANDROID_OUT_DIR: /yocto/android-16-source/out
+          ANDROID_X86_64_2GB_OUT_DIR: /yocto/android-16-source/out-x86_64-2gb
           ANDROID_MANIFEST_CACHE_DIR: /yocto/android-16-manifests
           OUTPUT_DIR: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
           JOBS: "8"

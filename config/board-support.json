@@ -29,6 +29,20 @@
       "vendor_source": "LineageOS/Waydroid lock"
     },
     {
+      "id": "framework-x86_64-2gb-validation",
+      "role": "compatibility-test-only",
+      "android_product": "lineage_waydroid_aesl_2gb_x86_64",
+      "status": "pending-build",
+      "cra_product_classification": "not-applicable-development-tool",
+      "support_start": null,
+      "support_end": null,
+      "gpu_stack": "host DRM passthrough",
+      "media_stack": "VA-API/FFmpeg",
+      "vendor_source": "LineageOS/Waydroid lock",
+      "memory_limit_bytes": 2147483648,
+      "validation_purpose": "Exercise the shared i.MX8MM Android 2 GB policy on native x86_64; not a substitute for board acceptance"
+    },
+    {
       "id": "imx8mm-custom-2gb",
       "role": "product-candidate",
       "android_product": "lineage_waydroid_aesl_2gb_arm64_only",
