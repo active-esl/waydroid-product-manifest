@@ -1,0 +1,8 @@
+AESL Waydroid product manifests
+Copyright 2026 Active ESL
+
+Repository-authored material is licensed under Apache-2.0 unless a file says
+otherwise. Source-lock and manifest files identify third-party repositories;
+they do not relicense those repositories or their contents. Delivered product
+licensing is determined from the built artifacts and recorded NOTICE/SBOM
+evidence.
