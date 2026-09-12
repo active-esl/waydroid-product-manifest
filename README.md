@@ -3,6 +3,37 @@
 This repository owns the reviewed, immutable source manifests used to build
 Active ESL Waydroid product images.
 
+## Repository role
+
+This is the **release-orchestration and source-lock repository** for the AESL
+Waydroid platform. It owns:
+
+- the complete, commit-pinned Android source graph;
+- product build workflows and reproducibility controls;
+- the supported-board register and release evidence requirements; and
+- SBOM, licence, binary-risk and runtime-acceptance gates.
+
+Related repositories have deliberately narrower responsibilities:
+
+- [`active-esl/android_device_waydroid_waydroid`](https://github.com/active-esl/android_device_waydroid_waydroid)
+  defines Waydroid Android products and their shared resource policies;
+- [`active-esl/android_vendor_waydroid`](https://github.com/active-esl/android_vendor_waydroid)
+  carries the generic Waydroid vendor integration and reviewed compatibility
+  patches; and
+- NXP kernel, bootloader, firmware and host-container integration remain in the
+  separately controlled Dynamic Devices BSP and Yocto repositories.
+
+Android versions and board profiles are release-line or product identities,
+not separate repository identities. The current maintained integration line is
+`lineage-23.2-aesl`; targets such as x86_64, i.MX8MM and i.MX95 remain explicit
+products beneath that line.
+
+Repository membership, a branch name or a successful CI run does not by itself
+create a five-year support commitment or demonstrate CRA conformity. Those
+claims attach only to an approved product release with its immutable manifest,
+declared support period, delivered-artifact SBOM, binary risk register and
+board acceptance evidence.
+
 The maintained product-line architecture, board lifecycle register and CRA
 engineering gates are defined in `docs/android-platform-lifecycle.md`,
 `config/board-support.json` and `docs/CRA-COMPLIANCE.md`. A successful image
