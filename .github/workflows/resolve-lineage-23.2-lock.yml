@@ -15,7 +15,7 @@ jobs:
     runs-on: [self-hosted, esl-proxmox]
     timeout-minutes: 720
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install pinned Android repo launcher
         run: |
           install -d "${RUNNER_TEMP}/android-repo/bin"
@@ -43,7 +43,7 @@ jobs:
           LOCK_OUTPUT: ${{ github.workspace }}/lineage-23.2-lock.xml
           JOBS: "4"
         run: ./scripts/resolve-lock.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: lineage-23.2-source-lock
           path: lineage-23.2-lock.xml

@@ -10,7 +10,7 @@ artifact_dir="${OUTPUT_DIR:-/yocto/android-16-artifacts/local}"
 manifest_cache_dir="${ANDROID_MANIFEST_CACHE_DIR:-/yocto/android-16-manifests}"
 lock_file="${SOURCE_LOCK:-${repo_root}/locks/lineage-23.2-lock.xml}"
 source_date_epoch_file="${SOURCE_DATE_EPOCH_FILE:-${repo_root}/locks/lineage-23.2-source-date-epoch}"
-jobs="${JOBS:-8}"
+jobs="${JOBS:-6}"
 meson_version="1.7.2"
 meson_sha256="82c6818dc81743c96de3a458f06175776ebfde4081195ea31ea6971838f25e38"
 meson_url="https://files.pythonhosted.org/packages/e5/2b/46bda4ef5a7ae4135dbfe27fc0368c44e5a349a897a54fdf2cedb8dcb66e/meson-1.7.2-py3-none-any.whl"
@@ -18,6 +18,8 @@ meson_tool_dir="/yocto/android-ci-tools/meson-${meson_version}"
 imx8mm_build_variant="${IMX8MM_BUILD_VARIANT:-userdebug}"
 build_scope="${BUILD_SCOPE:-all}"
 force_full_sync="${FORCE_FULL_SYNC:-false}"
+[[ "${jobs}" =~ ^[1-9][0-9]*$ ]] \
+    || { echo "JOBS must be a positive integer" >&2; exit 1; }
 python3 "${repo_root}/scripts/validate-board-support.py" \
     "${repo_root}/config/board-support.json"
 case "${imx8mm_build_variant}" in
@@ -383,6 +385,7 @@ for target in "${targets[@]}"; do
         cache_present_before=true
         read -r bytes_before mtime_before < <(stat -c '%s %Y' "${target_ninja_log}")
     fi
+    echo "Target cache before build: target=${target} present=${cache_present_before} ninja_log_bytes=${bytes_before}"
     target_started_at="$(date +%s)"
     printf 'start\t%s\t%s\t%s\t%s\t-\t-\t0\n' \
         "${target}" "${cache_present_before}" "${bytes_before}" "${mtime_before}" \

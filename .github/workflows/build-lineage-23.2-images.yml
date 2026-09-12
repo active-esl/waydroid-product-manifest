@@ -32,11 +32,16 @@ concurrency:
 jobs:
   build:
     runs-on: [self-hosted, esl-proxmox]
-    timeout-minutes: 720
+    # A first build in a new target-specific OUT_DIR has no compiled-object
+    # cache. Leave enough headroom for the cold build while subsequent runs
+    # reuse the persistent /yocto output tree.
+    timeout-minutes: 1440
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Regression-test source lock validation
         run: python3 scripts/test-validate-lock.py
+      - name: Regression-test Android CI resource policy
+        run: python3 scripts/test-build-resource-policy.py
       - name: Install pinned Android repo launcher
         run: scripts/install-repo-tool.sh
       - name: Preflight CI storage
@@ -57,12 +62,14 @@ jobs:
           ANDROID_X86_64_2GB_OUT_DIR: /yocto/android-16-source/out-x86_64-2gb
           ANDROID_MANIFEST_CACHE_DIR: /yocto/android-16-manifests
           OUTPUT_DIR: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
-          JOBS: "8"
+          # CT101 has a six-CPU cgroup quota. Do not create excess runnable and
+          # I/O pressure by asking Ninja for more parallelism than the quota.
+          JOBS: "6"
           SOONG_GOMEMLIMIT: 28GiB
           IMX8MM_BUILD_VARIANT: ${{ inputs.imx8mm_variant }}
           BUILD_SCOPE: ${{ inputs.build_scope }}
         run: scripts/build-images.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: aesl-lineage-23.2-${{ github.run_id }}-${{ github.run_attempt }}
