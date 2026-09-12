@@ -36,8 +36,9 @@ board acceptance evidence.
 
 The maintained product-line architecture, board lifecycle register and CRA
 engineering gates are defined in `docs/android-platform-lifecycle.md`,
-`config/board-support.json` and `docs/CRA-COMPLIANCE.md`. A successful image
-build is not by itself a supported-board or conformity decision.
+`config/board-support.json`, `docs/release-governance.md` and
+`docs/CRA-COMPLIANCE.md`. A successful image build is not by itself a
+supported-board or conformity decision.
 
 ## Android 16 baseline
 
