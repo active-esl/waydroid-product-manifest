@@ -182,8 +182,11 @@ printf 'phase\ttarget\tcache_present_before\tbytes_before\tmtime_before\tbytes_a
     > "${target_cache_evidence}"
 prepare_pinned_meson
 lock_sha="$(sha256sum "${lock_file}" | cut -d' ' -f1)"
+lock_project_count="$(python3 -c 'import sys,xml.etree.ElementTree as ET; print(len(ET.parse(sys.argv[1]).getroot().findall("project")))' "${lock_file}")"
 manifest_repo="${manifest_cache_dir}/${lock_sha}"
+manifest_cache_mode=reused
 if ! git -C "${manifest_repo}" rev-parse --verify HEAD >/dev/null 2>&1; then
+    manifest_cache_mode=created
     if [[ -e "${manifest_repo}" ]]; then
         quarantine="${manifest_repo}.invalid.$(date -u +%s)"
         echo "Quarantining incomplete cached manifest repository: ${quarantine}" >&2
@@ -205,8 +208,10 @@ cd "${android_dir}"
 cached_lock="$(cat .repo/aesl-source-lock.sha256 2>/dev/null || true)"
 cached_manifest_url="$(git --git-dir=.repo/manifests.git config --get remote.origin.url 2>/dev/null || true)"
 if [[ "${cached_lock}" == "${lock_sha}" && "${cached_manifest_url}" == "${manifest_url}" ]]; then
+    repo_init_mode=reused
     echo "Reusing cached repo initialization for source lock ${lock_sha}"
 else
+    repo_init_mode=activated
     echo "Activating Git-backed source lock ${lock_sha}"
     repo init -u "${manifest_url}" -b locked -m default.xml --git-lfs
 fi
@@ -311,6 +316,11 @@ fi
 printf '%s\n' \
     "lock_sha256=${lock_sha}" \
     "previous_lock_sha256=${cached_lock:-none}" \
+    "lock_validation=passed" \
+    "lock_project_count=${lock_project_count}" \
+    "duplicate_project_paths=0" \
+    "manifest_cache_mode=${manifest_cache_mode}" \
+    "repo_init_mode=${repo_init_mode}" \
     "source_sync_mode=${source_sync_mode}" \
     "changed_projects=${#changed_projects[@]}" \
     "patch_projects_applied=${#patch_projects_to_apply[@]}" \

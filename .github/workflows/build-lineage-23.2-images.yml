@@ -34,6 +34,8 @@ jobs:
     timeout-minutes: 720
     steps:
       - uses: actions/checkout@v4
+      - name: Regression-test source lock validation
+        run: python3 scripts/test-validate-lock.py
       - name: Install pinned Android repo launcher
         run: scripts/install-repo-tool.sh
       - name: Preflight CI storage

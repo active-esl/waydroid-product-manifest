@@ -4,6 +4,7 @@
 import re
 import sys
 import xml.etree.ElementTree as ET
+from collections import Counter
 from pathlib import Path
 
 
@@ -15,6 +16,10 @@ def main() -> int:
     manifest = Path(sys.argv[1])
     root = ET.parse(manifest).getroot()
     projects = root.findall("project")
+    project_paths = [project.get("path") or project.get("name", "") for project in projects]
+    path_counts = Counter(project_paths)
+    duplicate_paths = sorted(path for path, count in path_counts.items() if path and count > 1)
+    missing_paths = sum(not path for path in project_paths)
     required_projects = {
         "device/waydroid/waydroid": "active-esl/android_device_waydroid_waydroid",
         "vendor/extra": "active-esl/android_vendor_waydroid",
@@ -34,16 +39,19 @@ def main() -> int:
             invalid.append((project.get("path") or project.get("name"), revision))
 
     forbidden = [element.tag for element in root if element.tag in {"include", "remove-project", "extend-project"}]
-    if not projects or invalid or forbidden or missing_required:
+    if not projects or invalid or forbidden or missing_required or duplicate_paths or missing_paths:
         print(
             f"invalid lock: projects={len(projects)} floating={len(invalid)} "
-            f"directives={len(forbidden)} required={len(missing_required)}",
+            f"directives={len(forbidden)} required={len(missing_required)} "
+            f"duplicate_paths={len(duplicate_paths)} missing_paths={missing_paths}",
             file=sys.stderr,
         )
         for name, revision in invalid[:10]:
             print(f"floating revision: {name}: {revision}", file=sys.stderr)
         for path, name in missing_required.items():
             print(f"required project missing or replaced: {path}: {name}", file=sys.stderr)
+        for path in duplicate_paths[:10]:
+            print(f"duplicate project path: {path}", file=sys.stderr)
         return 1
 
     print(f"valid immutable lock: {len(projects)} projects")
