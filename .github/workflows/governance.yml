@@ -1,0 +1,29 @@
+name: Repository governance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Validate shell syntax
+        run: find scripts -maxdepth 1 -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n
+
+      - name: Validate Python syntax
+        run: python3 -m compileall -q scripts
+
+      - name: Test immutable source-lock validation
+        run: python3 scripts/test-validate-lock.py
+
+      - name: Validate board support register
+        run: python3 scripts/validate-board-support.py
