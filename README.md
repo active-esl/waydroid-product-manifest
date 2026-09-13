@@ -27,6 +27,55 @@ Related repositories have deliberately narrower responsibilities:
 - NXP kernel, bootloader, firmware and host-container integration remain in the
   separately controlled Dynamic Devices BSP and Yocto repositories.
 
+## Repository and layer architecture
+
+```mermaid
+flowchart LR
+    subgraph android[Android source and image plane]
+        upstream[LineageOS and Waydroid upstream]
+        device[android_device_waydroid_waydroid]
+        vendor[android_vendor_waydroid]
+        manifest[waydroid-product-manifest<br/>overlays, immutable locks and release evidence]
+        android_build[Locked Android image build]
+        artifacts[system.img and board-specific vendor.img<br/>SBOM, NOTICE, checksums and build-info]
+
+        upstream --> manifest
+        device --> manifest
+        vendor --> manifest
+        manifest --> android_build --> artifacts
+    end
+
+    subgraph host[Foundries LmP and Yocto host plane]
+        product[meta-dynamicdevices<br/>KAS and product integration]
+        distro[meta-dynamicdevices-distro<br/>distribution and image policy]
+        bsp[meta-dynamicdevices-bsp<br/>boards, kernel and boot integration]
+        partner[meta-partner-nxp-imx<br/>isolated NXP partner layer]
+        host_build[BitBake host image<br/>Waydroid runtime, OTA and recovery]
+
+        distro --> product
+        bsp --> product
+        partner --> product
+        product --> host_build
+    end
+
+    artifacts -->|Pinned checksums and build-info policy| product
+    host_build --> deployment[Board deployment]
+    deployment --> imx8[Separate i.MX8MM acceptance evidence]
+    deployment --> imx95[Separate i.MX95 acceptance evidence]
+```
+
+The manifest repository controls the Android source graph and image evidence;
+it does not replace the host layers. At the integration boundary,
+[`DynamicDevices/meta-dynamicdevices`](https://github.com/DynamicDevices/meta-dynamicdevices)
+combines the
+[`meta-dynamicdevices-distro`](https://github.com/DynamicDevices/meta-dynamicdevices-distro),
+[`meta-dynamicdevices-bsp`](https://github.com/DynamicDevices/meta-dynamicdevices-bsp)
+and isolated
+[`active-esl/meta-partner-nxp-imx`](https://github.com/active-esl/meta-partner-nxp-imx)
+layers. Android images cross that boundary only as reviewed artefacts with
+pinned checksums and recorded build policy. i.MX8MM and i.MX95 then retain
+separate vendor-image, hardware and release-acceptance evidence.
+
 Android versions and board profiles are release-line or product identities,
 not separate repository identities. The current maintained integration line is
 `lineage-23.2-aesl`; targets such as x86_64, i.MX8MM and i.MX95 remain explicit
