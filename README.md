@@ -3,6 +3,10 @@
 This repository owns the reviewed, immutable source manifests used to build
 Active ESL Waydroid product images.
 
+[![Repository governance](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/governance.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/governance.yml)
+[![Build locked Android 16 images](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml)
+[![Resolve Android 16 source lock](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml)
+
 ## Repository role
 
 This is the **release-orchestration and source-lock repository** for the AESL
@@ -23,6 +27,55 @@ Related repositories have deliberately narrower responsibilities:
 - NXP kernel, bootloader, firmware and host-container integration remain in the
   separately controlled Dynamic Devices BSP and Yocto repositories.
 
+## Repository and layer architecture
+
+```mermaid
+flowchart LR
+    subgraph android[Android source and image plane]
+        upstream[LineageOS and Waydroid upstream]
+        device[android_device_waydroid_waydroid]
+        vendor[android_vendor_waydroid]
+        manifest[waydroid-product-manifest<br/>overlays, immutable locks and release evidence]
+        android_build[Locked Android image build]
+        artifacts[system.img and board-specific vendor.img<br/>SBOM, NOTICE, checksums and build-info]
+
+        upstream --> manifest
+        device --> manifest
+        vendor --> manifest
+        manifest --> android_build --> artifacts
+    end
+
+    subgraph host[Foundries LmP and Yocto host plane]
+        product[meta-dynamicdevices<br/>KAS and product integration]
+        distro[meta-dynamicdevices-distro<br/>distribution and image policy]
+        bsp[meta-dynamicdevices-bsp<br/>boards, kernel and boot integration]
+        partner[meta-partner-nxp-imx<br/>isolated NXP partner layer]
+        host_build[BitBake host image<br/>Waydroid runtime, OTA and recovery]
+
+        distro --> product
+        bsp --> product
+        partner --> product
+        product --> host_build
+    end
+
+    artifacts -->|Pinned checksums and build-info policy| product
+    host_build --> deployment[Board deployment]
+    deployment --> imx8[Separate i.MX8MM acceptance evidence]
+    deployment --> imx95[Separate i.MX95 acceptance evidence]
+```
+
+The manifest repository controls the Android source graph and image evidence;
+it does not replace the host layers. At the integration boundary,
+[`DynamicDevices/meta-dynamicdevices`](https://github.com/DynamicDevices/meta-dynamicdevices)
+combines the
+[`meta-dynamicdevices-distro`](https://github.com/DynamicDevices/meta-dynamicdevices-distro),
+[`meta-dynamicdevices-bsp`](https://github.com/DynamicDevices/meta-dynamicdevices-bsp)
+and isolated
+[`active-esl/meta-partner-nxp-imx`](https://github.com/active-esl/meta-partner-nxp-imx)
+layers. Android images cross that boundary only as reviewed artefacts with
+pinned checksums and recorded build policy. i.MX8MM and i.MX95 then retain
+separate vendor-image, hardware and release-acceptance evidence.
+
 Android versions and board profiles are release-line or product identities,
 not separate repository identities. The current maintained integration line is
 `lineage-23.2-aesl`; targets such as x86_64, i.MX8MM and i.MX95 remain explicit
@@ -39,6 +92,19 @@ engineering gates are defined in `docs/android-platform-lifecycle.md`,
 `config/board-support.json`, `docs/release-governance.md` and
 `docs/CRA-COMPLIANCE.md`. A successful image build is not by itself a
 supported-board or conformity decision.
+
+## Documentation
+
+- [Android platform lifecycle](docs/android-platform-lifecycle.md) defines the
+  maintained release line, product structure and board-support lifecycle.
+- [NXP board bring-up](docs/nxp-board-bringup.md) defines the separate i.MX8MM
+  and i.MX95 integration and acceptance paths.
+- [Release governance](docs/release-governance.md) defines release authority,
+  immutable evidence and support commitments.
+- [CRA compliance](docs/CRA-COMPLIANCE.md) maps engineering evidence to the
+  Cyber Resilience Act controls used by this repository.
+- [Contributing](CONTRIBUTING.md) and [Security](SECURITY.md) define change and
+  vulnerability-reporting policy.
 
 ## Android 16 baseline
 
@@ -132,6 +198,25 @@ Google applications, Widevine, native-translation prebuilts, Android TV
 Settings and optional Redroid prebuilts are excluded from the AESL Vanilla
 source graph. Licence verification remains a release gate before the first
 production image.
+
+## CI workflows
+
+**Repository governance** runs for pull requests and pushes to `main`. It
+checks shell and Python syntax, immutable source-lock validation and the
+supported-board register. The image workflow separately regression-tests its
+CI resource policy before starting a build.
+
+**Resolve Android 16 source lock** and **Build locked Android 16 images** are
+manually dispatched because they operate the controlled release process and
+use the dedicated Android build runner. The image workflow supports `all`,
+`x86_64`, `x86_64_2gb` and `imx8mm` scopes. Its 24-hour timeout accommodates a
+cold target-specific output tree; subsequent runs reuse the persistent
+incremental state under `/yocto`.
+
+The badges report the latest workflow result on `main`. A green image-build
+badge proves only the inputs and scope recorded by that run. It does not by
+itself approve a release, establish board support or demonstrate CRA
+conformity.
 
 ## CI storage invariant
 
