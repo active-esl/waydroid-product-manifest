@@ -133,6 +133,29 @@ The maintained ARM64 CI matrix is explicit:
 | R16 / LineageOS 23.2 | `standard` | `arm64_standard` | `lineage_waydroid_arm64_only` | Preferred maintained baseline |
 | R16 / LineageOS 23.2 | `2gb` | `arm64_2gb` | `lineage_waydroid_aesl_2gb_arm64_only` | Preferred constrained baseline |
 
+### Build and board-test status
+
+This is the current evidence matrix, modelled on the build-status table used by
+`DynamicDevices/meta-mono`. It deliberately separates an image build from a
+successful board boot: **PASS** means that the linked evidence completed for
+that column, **FAIL** means that the linked test exposed a reproducible
+blocker, and **NOT RUN** means no qualifying result has been recorded yet.
+
+| Release | Profile | Image build | FRDM i.MX95 boot | Release intent |
+| --- | --- | --- | --- | --- |
+| R13 / LineageOS 20 | `standard` | **PASS** ([run 34838947265](https://github.com/active-esl/android_vendor_waydroid/actions/runs/34838947265)) | **NOT RUN** | Legacy customer qualification |
+| R13 / LineageOS 20 | `2gb` | **NOT RUN** | **NOT RUN** | Legacy constrained products |
+| R16 / LineageOS 23.2 | `standard` | **NOT RUN** | **NOT RUN** | Preferred maintained baseline |
+| R16 / LineageOS 23.2 | `2gb` | **PASS** ([run 34856380503](https://github.com/active-esl/waydroid-product-manifest/actions/runs/34856380503)) | **FAIL** (2026-09-14: container reaches Android 16 userspace after the image-APEX host fix, but SurfaceFlinger aborts with no suitable EGL configuration) | Preferred constrained baseline |
+
+The status date is **2026-09-14**. Update a cell only from immutable CI or
+board-test evidence and link that evidence in the cell. A green image workflow
+does not imply a green host build, Android boot, hardware-acceleration test,
+OTA test, production release, or CRA conformity decision. R16 no longer
+supports the legacy flattened-APEX build mode, so its host acceptance path must
+provide narrowly scoped loop and device-mapper support rather than claiming
+that `OVERRIDE_TARGET_FLATTEN_APEX` changed the image format.
+
 Each scope has an independent Soong output cache and emits paired images,
 immutable source provenance, artifact-derived SPDX, NOTICE archives, build
 metadata and complete checksums. Hardware support and a commercial support
