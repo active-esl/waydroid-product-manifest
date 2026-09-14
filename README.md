@@ -169,8 +169,13 @@ separate release directory and verified SHA-256 values
 (`system.img`) and
 `7337a60ad6230b7ada906cef9a72ec0048255776b70444c353907b946d677d53`
 (`vendor.img`) on the board before cutover. The preserved R13 image link was
-restored after the failed test. Do not repeat the R16 image swap on target 2892;
-build and install the complete maintained host runtime first.
+restored after the failed test. That rollback is reversible storage evidence,
+not a fresh R13 acceptance result: on the 2026-09-14 post-reboot check, target
+2892 reported Android 13 with the container and session running, but
+`sys.boot_completed` remained empty and the UI unit failed while waiting for
+`waydroidplatform`. The matrix PASS remains the earlier immutable target 2887
+result. Do not repeat the R16 image swap on target 2892; build and install the
+complete maintained host runtime first.
 
 Each scope has an independent Soong output cache and emits paired images,
 immutable source provenance, artifact-derived SPDX, NOTICE archives, build

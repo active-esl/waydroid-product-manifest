@@ -35,6 +35,13 @@ runtime did not produce a qualifying boot, so it is not release evidence. Do
 not repeat that transplant: build the complete host integration and retest the
 paired host and Android artifacts.
 
+The preserved R13 image link is restored, but the current target 2892 is not a
+qualified fallback. A bounded check after reboot showed Android release 13 and
+RUNNING container/session states, while `sys.boot_completed` stayed empty and
+`waydroid-jaguar-ui.service` failed waiting for `waydroidplatform`. Do not use
+that state to replace the earlier target 2887 R13 PASS evidence, and do not
+perform another runtime transplant while the complete host build is pending.
+
 ## Implementation sequence
 
 1. Dispatch **Build Android R16 / LineageOS 23.2 images** with
