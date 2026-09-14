@@ -20,8 +20,9 @@ issues.
 
 ## Implementation sequence
 
-1. Dispatch **Build locked Android 16 images** with `build_scope=imx8mm` and
-   `imx8mm_variant=userdebug`. Preserve `build-info.json`, `SHA256SUMS`, SPDX,
+1. Dispatch **Build Android R16 / LineageOS 23.2 images** with
+   `build_scope=arm64_2gb` and `arm64_variant=userdebug`. Preserve
+   `build-info.json`, `SHA256SUMS`, SPDX,
    NOTICE archives and `source-manifest.xml` with the two images.
 2. Update the Yocto Waydroid runtime to the reviewed Android 16-compatible
    host implementation. Package pinned libgbinder 1.1.52 and libglibutil
@@ -43,7 +44,7 @@ issues.
    `/usr/libexec/waydroid-acceleration-check` after cold boot, container restart
    and suspend/resume. Run `/usr/libexec/waydroid-memory-headroom` for idle,
    steady-state and peak kiosk workloads and retain all reports.
-7. After integration passes, rebuild Android with `imx8mm_variant=user` and
+7. After integration passes, rebuild Android with `arm64_variant=user` and
    repeat the board evidence as the production/SELinux release gate. Deliver
    subsequent host updates through the LmP OSTree/OTA path; reserve UUU for
    recovery or storage-layout changes.
