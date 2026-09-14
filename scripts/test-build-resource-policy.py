@@ -27,6 +27,15 @@ def main() -> int:
     for line in expected_workflow_lines:
         assert workflow.count(line) == 1, f"missing or duplicate workflow policy: {line}"
 
+    release_identity = (
+        "name: Build Android R16 / LineageOS 23.2 images",
+        "run-name: Android R16 / LineageOS 23.2 - ${{ inputs.build_scope }}",
+        "name: Android R16 / LineageOS 23.2 - ${{ inputs.build_scope }}",
+        "name: aesl-android-r16-lineage-23.2-${{ github.run_id }}",
+    )
+    for label in release_identity:
+        assert label in workflow, f"missing Android R16 CI identity: {label}"
+
     assert 'jobs="${JOBS:-6}"' in build_script
     assert '[[ "${jobs}" =~ ^[1-9][0-9]*$ ]]' in build_script
     assert "Target cache before build:" in build_script

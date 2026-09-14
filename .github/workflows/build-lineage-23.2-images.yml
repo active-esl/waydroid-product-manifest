@@ -1,4 +1,5 @@
-name: Build locked Android 16 images
+name: Build Android R16 / LineageOS 23.2 images
+run-name: Android R16 / LineageOS 23.2 - ${{ inputs.build_scope }} (${{ inputs.imx8mm_variant }})
 
 on:
   workflow_dispatch:
@@ -31,6 +32,7 @@ concurrency:
 
 jobs:
   build:
+    name: Android R16 / LineageOS 23.2 - ${{ inputs.build_scope }}
     runs-on: [self-hosted, esl-proxmox]
     # A first build in a new target-specific OUT_DIR has no compiled-object
     # cache. Leave enough headroom for the cold build while subsequent runs
@@ -55,7 +57,7 @@ jobs:
             exit 1
           fi
           df -h / /yocto
-      - name: Build selected Android image scope
+      - name: Build Android R16 / LineageOS 23.2 image scope
         env:
           ANDROID_WORKSPACE: /yocto/android-16-source
           ANDROID_OUT_DIR: /yocto/android-16-source/out
@@ -72,7 +74,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: aesl-lineage-23.2-${{ github.run_id }}-${{ github.run_attempt }}
+          name: aesl-android-r16-lineage-23.2-${{ github.run_id }}-${{ github.run_attempt }}
           path: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: 30

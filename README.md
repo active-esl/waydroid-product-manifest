@@ -4,8 +4,8 @@ This repository owns the reviewed, immutable source manifests used to build
 Active ESL Waydroid product images.
 
 [![Repository governance](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/governance.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/governance.yml)
-[![Build locked Android 16 images](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml)
-[![Resolve Android 16 source lock](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml)
+[![Build Android R16 / LineageOS 23.2 images](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml)
+[![Resolve Android R16 / LineageOS 23.2 source lock](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml)
 
 ## Repository role
 
@@ -123,7 +123,7 @@ bootstrap overlays.
 
 ## Resolve a candidate lock
 
-Run the **Resolve Android 16 source lock** workflow. It synchronises the
+Run the **Resolve Android R16 / LineageOS 23.2 source lock** workflow. It synchronises the
 LineageOS and Waydroid source graph, writes `lineage-23.2-lock.xml`, and rejects
 the result unless every project revision is a full Git commit hash.
 
@@ -131,7 +131,7 @@ Review the workflow artifact before committing it to
 `locks/lineage-23.2-lock.xml`. Updating that file is a controlled source-base
 change and should be performed independently of an image release.
 
-The **Build locked Android 16 images** workflow refuses to build without that
+The **Build Android R16 / LineageOS 23.2 images** workflow refuses to build without that
 reviewed lock. It builds the x86_64 compatibility target first and the AESL
 i.MX8MM ARM64-only target second, generates an SPDX SBOM for each, and records
 the system and vendor NOTICE licence archives, checksums and immutable build
@@ -206,7 +206,8 @@ checks shell and Python syntax, immutable source-lock validation and the
 supported-board register. The image workflow separately regression-tests its
 CI resource policy before starting a build.
 
-**Resolve Android 16 source lock** and **Build locked Android 16 images** are
+**Resolve Android R16 / LineageOS 23.2 source lock** and
+**Build Android R16 / LineageOS 23.2 images** are
 manually dispatched because they operate the controlled release process and
 use the dedicated Android build runner. The image workflow supports `all`,
 `x86_64`, `x86_64_2gb` and `imx8mm` scopes. Its 24-hour timeout accommodates a
