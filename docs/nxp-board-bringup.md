@@ -20,6 +20,14 @@ image APEX. Those changes exist in the product integration source but have not
 been delivered in the Jaguar Foundries image. This is a host-build blocker,
 not a reason to rebuild the already checksum-proven Android image.
 
+A candidate host build was dispatched on 2026-09-14 using the isolated
+Foundries branch `r16-jaguar-host`. Signed manifest commit `0ef0782` adds the
+partner layer pinned at signed commit `61b4b6d`; the latter supplies Waydroid
+1.6.3, the AIDL6 Binder stack, writable Android metadata and the narrowly
+scoped loop/device-mapper access needed by image APEX. The build branch is
+deliberately separate from `main-jaguar-screen`, so publication alone cannot
+move the lab board. A published target remains pending.
+
 The 2026-09-14 manual test of R16 2 GB run 34856380503 on the physical Jaguar
 screen machine confirmed that Binder appears but `waydroidplatform` never
 registers on target 2892. A reversible live transplant of the FRDM 1.6.3/AIDL6

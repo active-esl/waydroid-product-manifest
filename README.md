@@ -156,6 +156,13 @@ supports the legacy flattened-APEX build mode, so its host acceptance path must
 provide narrowly scoped loop and device-mapper support rather than claiming
 that `OVERRIDE_TARGET_FLATTEN_APEX` changed the image format.
 
+The replacement Jaguar host build was dispatched on the isolated Foundries
+branch `r16-jaguar-host` from signed manifest commit `0ef0782`. It pins the
+Android 16 host integration at signed partner-layer commit `61b4b6d` and does
+not carry the board's `main-jaguar-screen` OTA tag. Until Foundries publishes a
+successful target and that target passes the physical test, the Jaguar R16
+matrix cell remains **FAIL**.
+
 The 2026-09-14 Jaguar test staged the exact run 34856380503 image pair under a
 separate release directory and verified SHA-256 values
 `5aca4e74552d938d1ec867034e87c780340f6d8fafd9b4181b2852b1ef68e1b8`
