@@ -1,4 +1,5 @@
-name: Resolve Android 16 source lock
+name: Resolve Android R16 / LineageOS 23.2 source lock
+run-name: Resolve Android R16 / LineageOS 23.2 source lock
 
 on:
   workflow_dispatch:
@@ -12,6 +13,7 @@ concurrency:
 
 jobs:
   resolve:
+    name: Android R16 / LineageOS 23.2 source lock
     runs-on: [self-hosted, esl-proxmox]
     timeout-minutes: 720
     steps:
