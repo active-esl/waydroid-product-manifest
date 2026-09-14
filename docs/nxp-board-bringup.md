@@ -11,12 +11,21 @@ The Android product `lineage_waydroid_aesl_2gb_arm64_only` is already defined.
 It is ARM64-only, Vanilla, low-RAM, PSI/lmkd tuned, Mesa Etnaviv/minigbm based,
 Vulkan-free and limited to one V4L2 Codec2 AVC decoder stream.
 
-The current Yocto Waydroid recipes are not yet suitable for this image. They
-still select Waydroid 1.4.2 and Lineage 18.1 image downloads, while the product
-feature requires Vulkan. Android 16 host compatibility also requires the
-reviewed AIDL6 service-manager and platform-interface changes proven by the
-Framework validation. These are blocking integration gaps, not board test
-issues.
+The released Jaguar host (Foundries target 2892) is not yet suitable for this
+image. It ships Waydroid 1.4.2, libgbinder 1.1.35, libglibutil 1.0.75 and the
+legacy platform-interface descriptor. Android 16 host compatibility requires
+the reviewed Waydroid 1.6.3, libgbinder 1.1.52, libglibutil 1.0.82 and AIDL6
+platform-interface changes, plus loop-control and device-mapper mounts for
+image APEX. Those changes exist in the product integration source but have not
+been delivered in the Jaguar Foundries image. This is a host-build blocker,
+not a reason to rebuild the already checksum-proven Android image.
+
+The 2026-09-14 manual test of R16 2 GB run 34856380503 on the physical Jaguar
+screen machine confirmed that Binder appears but `waydroidplatform` never
+registers on target 2892. A reversible live transplant of the FRDM 1.6.3/AIDL6
+runtime did not produce a qualifying boot, so it is not release evidence. Do
+not repeat that transplant: build the complete host integration and retest the
+paired host and Android artifacts.
 
 ## Implementation sequence
 

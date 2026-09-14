@@ -141,12 +141,12 @@ successful board boot: **PASS** means that the linked evidence completed for
 that column, **FAIL** means that the linked test exposed a reproducible
 blocker, and **NOT RUN** means no qualifying result has been recorded yet.
 
-| Release | Profile | Image build | FRDM i.MX95 boot | Release intent |
-| --- | --- | --- | --- | --- |
-| R13 / LineageOS 20 | `standard` | **PASS** ([run 34838947265](https://github.com/active-esl/android_vendor_waydroid/actions/runs/34838947265)) | **NOT RUN** | Legacy customer qualification |
-| R13 / LineageOS 20 | `2gb` | **NOT RUN** | **NOT RUN** | Legacy constrained products |
-| R16 / LineageOS 23.2 | `standard` | **NOT RUN** | **NOT RUN** | Preferred maintained baseline |
-| R16 / LineageOS 23.2 | `2gb` | **PASS** ([run 34856380503](https://github.com/active-esl/waydroid-product-manifest/actions/runs/34856380503)) | **FAIL** (2026-09-14: container reaches Android 16 userspace after the image-APEX host fix, but SurfaceFlinger aborts with no suitable EGL configuration) | Preferred constrained baseline |
+| Release | Profile | Image build | Jaguar Screen i.MX8MM boot | FRDM i.MX95 boot | Release intent |
+| --- | --- | --- | --- | --- | --- |
+| R13 / LineageOS 20 | `standard` | **PASS** ([run 34838947265](https://github.com/active-esl/android_vendor_waydroid/actions/runs/34838947265)) | **PASS** (Foundries target 2887: Android UI and Etnaviv acceleration at 1920x1200) | **NOT RUN** | Legacy customer qualification |
+| R13 / LineageOS 20 | `2gb` | **NOT RUN** | **NOT RUN** | **NOT RUN** | Legacy constrained products |
+| R16 / LineageOS 23.2 | `standard` | **NOT RUN** | **NOT RUN** | **NOT RUN** | Preferred maintained baseline |
+| R16 / LineageOS 23.2 | `2gb` | **PASS** ([run 34856380503](https://github.com/active-esl/waydroid-product-manifest/actions/runs/34856380503)) | **FAIL** (2026-09-14: target 2892 has Waydroid 1.4.2/libgbinder 1.1.35 and never exposes the Android 16 platform service; requires a complete 1.6.3/AIDL6 host build with image-APEX device mounts) | **FAIL** (2026-09-14: the i.MX8MM vendor image reaches Android 16 userspace after the image-APEX host fix, but cannot create an EGL configuration on the i.MX95 DPU-only DRM node) | Preferred constrained baseline |
 
 The status date is **2026-09-14**. Update a cell only from immutable CI or
 board-test evidence and link that evidence in the cell. A green image workflow
@@ -155,6 +155,15 @@ OTA test, production release, or CRA conformity decision. R16 no longer
 supports the legacy flattened-APEX build mode, so its host acceptance path must
 provide narrowly scoped loop and device-mapper support rather than claiming
 that `OVERRIDE_TARGET_FLATTEN_APEX` changed the image format.
+
+The 2026-09-14 Jaguar test staged the exact run 34856380503 image pair under a
+separate release directory and verified SHA-256 values
+`5aca4e74552d938d1ec867034e87c780340f6d8fafd9b4181b2852b1ef68e1b8`
+(`system.img`) and
+`7337a60ad6230b7ada906cef9a72ec0048255776b70444c353907b946d677d53`
+(`vendor.img`) on the board before cutover. The preserved R13 image link was
+restored after the failed test. Do not repeat the R16 image swap on target 2892;
+build and install the complete maintained host runtime first.
 
 Each scope has an independent Soong output cache and emits paired images,
 immutable source provenance, artifact-derived SPDX, NOTICE archives, build
