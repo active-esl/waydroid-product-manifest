@@ -115,6 +115,29 @@ supported-board or conformity decision.
 - Initial vendor commit: `d39b2f967d7e54642d674030b1bc1310cdb7b93b`
 - Product variants: Vanilla x86_64 validation, then Vanilla ARM64
 
+## Maintained release and memory profiles
+
+AESL targets Android R16 / LineageOS 23.2 as the maintainable baseline for new
+CRA-oriented product work over a declared support period of at least five
+years. This is an engineering support objective, not a claim that a build or
+product is CRA compliant. Android R13 / LineageOS 20 remains available in the
+legacy `android_vendor_waydroid` pipeline for potential customers with an
+existing compatibility or qualification requirement.
+
+The maintained ARM64 CI matrix is explicit:
+
+| Release | Profile | Build scope | Android product | Maintenance intent |
+| --- | --- | --- | --- | --- |
+| R13 / LineageOS 20 | `standard` | R13 `memory_profile=standard` | `lineage_waydroid_arm64` | Legacy customer qualification |
+| R13 / LineageOS 20 | `2gb` | R13 `memory_profile=2gb` | `lineage_waydroid_aesl_2gb_arm64_only` | Legacy constrained products |
+| R16 / LineageOS 23.2 | `standard` | `arm64_standard` | `lineage_waydroid_arm64_only` | Preferred maintained baseline |
+| R16 / LineageOS 23.2 | `2gb` | `arm64_2gb` | `lineage_waydroid_aesl_2gb_arm64_only` | Preferred constrained baseline |
+
+Each scope has an independent Soong output cache and emits paired images,
+immutable source provenance, artifact-derived SPDX, NOTICE archives, build
+metadata and complete checksums. Hardware support and a commercial support
+period still attach to an accepted whole-product release, not to this matrix.
+
 The files under `overlays/lineage-23.2` are bootstrap inputs only. Branch
 names are permitted there because the resolver converts the complete checkout
 into a flattened manifest containing commit hashes. Product image builds must
@@ -132,22 +155,23 @@ Review the workflow artifact before committing it to
 change and should be performed independently of an image release.
 
 The **Build Android R16 / LineageOS 23.2 images** workflow refuses to build without that
-reviewed lock. It builds the x86_64 compatibility target first and the AESL
-i.MX8MM ARM64-only target second, generates an SPDX SBOM for each, and records
+reviewed lock. Its `all` scope builds the x86_64 compatibility target plus the
+standard and 2 GB ARM64 targets, generates an SPDX SBOM for each, and records
 the system and vendor NOTICE licence archives, checksums and immutable build
 metadata with the images. Development
 `userdebug` output is evidence for integration only; a production release must
 also pass the `user` target and the board acceptance procedure.
-Select the `user` i.MX8MM variant when manually dispatching the image workflow;
+Select the `user` ARM64 variant when manually dispatching the image workflow;
 that path invokes the blocking runtime-SELinux exception decision as well as
 the normal neverallow build checks. The default `userdebug` path inventories
 the exception but cannot produce production-approved release evidence.
-`build-info.json` records the selected i.MX8MM variant, release class and
+`build-info.json` records the selected ARM64 variant, memory profile, release class and
 SELinux gate mode so the Yocto host build can reject an integration artifact
 when producing a production image.
 
-After the x86_64 lane has already passed, select the `imx8mm` build scope to
-resume a failed board-image build without repeating the compatibility lane.
+After the x86_64 lane has already passed, select `arm64_standard` or
+`arm64_2gb` to rebuild only the required maintained profile without repeating
+the compatibility lane.
 The normal release-validation scope remains `all`.
 
 ## Framework x86_64 smoke test
@@ -210,7 +234,7 @@ CI resource policy before starting a build.
 **Build Android R16 / LineageOS 23.2 images** are
 manually dispatched because they operate the controlled release process and
 use the dedicated Android build runner. The image workflow supports `all`,
-`x86_64`, `x86_64_2gb` and `imx8mm` scopes. Its 24-hour timeout accommodates a
+`arm64_standard`, `arm64_2gb`, `x86_64` and `x86_64_2gb` scopes. Its 24-hour timeout accommodates a
 cold target-specific output tree; subsequent runs reuse the persistent
 incremental state under `/yocto`.
 

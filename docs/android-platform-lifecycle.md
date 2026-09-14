@@ -4,16 +4,25 @@ Updated: 2026-09-11
 
 ## Product-line model
 
-AESL maintains one reviewed Android 16/LineageOS 23.2 core and thin board
-products. The core owns framework security fixes, common policy, applications,
-build reproducibility and release evidence. Each board owns a separate vendor
-image, host BSP contract and hardware acceptance record.
+AESL maintains Android R16/LineageOS 23.2 as the preferred core for new
+products and long-support CRA engineering. Its support objective is at least
+five years for an admitted product release, extended where the documented
+expected product lifetime is longer. Android R13/LineageOS 20 is a separate
+legacy lane for potential customer compatibility and qualification needs; it
+does not become a long-support commitment merely because CI can rebuild it.
+
+Both release lines expose `standard` and `2gb` ARM64 product profiles. The core
+owns framework security fixes, common policy, applications, build
+reproducibility and release evidence. Each board owns a separate vendor image,
+host BSP contract and hardware acceptance record.
 
 ```text
 reviewed Android/Lineage core
 ├── Framework x86_64 compatibility lane (development only)
-├── i.MX8MM product + Etnaviv/V4L2 vendor contract
-└── i.MX95 product + NXP Mali/Hantro vendor contract
+├── ARM64 standard profile
+├── ARM64 2 GB profile
+├── i.MX8MM Etnaviv/V4L2 vendor contract
+└── i.MX95 NXP Mali/Hantro vendor contract
 ```
 
 ARM64 is an instruction-set boundary, not a hardware compatibility guarantee.

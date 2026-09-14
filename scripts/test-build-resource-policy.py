@@ -39,6 +39,22 @@ def main() -> int:
     assert 'jobs="${JOBS:-6}"' in build_script
     assert '[[ "${jobs}" =~ ^[1-9][0-9]*$ ]]' in build_script
     assert "Target cache before build:" in build_script
+    profile_corpus = build_script + (REPO_ROOT / "scripts/write-build-info.py").read_text(
+        encoding="utf-8"
+    )
+    for profile_contract in (
+        "arm64_standard)",
+        "arm64_2gb|imx8mm)",
+        "lineage_waydroid_arm64_only-bp4a-",
+        "lineage_waydroid_aesl_2gb_arm64_only-bp4a-",
+        "ANDROID_ARM64_STANDARD_OUT_DIR",
+        "ANDROID_ARM64_2GB_OUT_DIR",
+        '\"android_release\": \"r16\"',
+        '\"maintenance_class\": \"maintained-5-plus-years\"',
+    ):
+        assert profile_contract in profile_corpus, (
+            f"missing Android R16 product-profile contract: {profile_contract}"
+        )
     assert "actions/checkout@v4" not in workflow_corpus
     assert "actions/upload-artifact@v4" not in workflow_corpus
 

@@ -6,6 +6,19 @@
     "lineage_version": "23.2",
     "minimum_support_years": 5,
     "support_rule": "max(5 years, documented expected product lifetime)",
+    "maintenance_class": "preferred-new-product-baseline",
+    "build_profiles": [
+      {
+        "id": "standard",
+        "android_product": "lineage_waydroid_arm64_only",
+        "memory_limit_bytes": null
+      },
+      {
+        "id": "2gb",
+        "android_product": "lineage_waydroid_aesl_2gb_arm64_only",
+        "memory_limit_bytes": 2147483648
+      }
+    ],
     "release_evidence": [
       "immutable source manifest",
       "SPDX SBOM",
