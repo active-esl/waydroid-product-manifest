@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-09-11",
+  "updated": "2026-09-15",
   "platform": {
     "android_major": 16,
     "lineage_version": "23.2",
@@ -67,7 +67,13 @@
       "gpu_stack": "Mesa Etnaviv",
       "media_stack": "V4L2 Codec2 H.264",
       "vendor_source": "LineageOS/Waydroid lock",
-      "host_bsp_contract": "Foundries LmP; exact release and kernel ABI pending release baseline"
+      "host_bsp_contract": "Foundries LmP; exact release and kernel ABI pending release baseline",
+      "evidence_state": {
+        "android_image": "built: R16 2 GB userdebug run 34856380503",
+        "host_build": "blocked: no successful platform-r16-jaguar-screen target",
+        "staging": "run 34856380503 pair checksum-staged on target 2892 then rolled back",
+        "acceptance": "blocked pending corrected R16 host build and physical test"
+      }
     },
     {
       "id": "imx95-family",
@@ -82,6 +88,12 @@
       "media_stack": "NXP i.MX Codec2/Hantro",
       "vendor_source": "NXP android-16.0.0_2.0.0 candidate; proprietary overlay licence review required",
       "host_bsp_contract": "Foundries LmP NXP BSP; exact release, kernel and Mali ABI pending",
+      "evidence_state": {
+        "android_image": "blocked: explicit i.MX95 Mali/Hantro vendor image not built",
+        "host_build": "built: Foundries development target 2936",
+        "staging": "target 2936 exercised with R16 system plus incompatible i.MX8MM vendor image",
+        "acceptance": "blocked: Android userspace starts but EGL fails on the DPU-only DRM node"
+      },
       "blocked_release_gates": [
         "obtain and hash NXP android-16.0.0_2.0.0 proprietary overlay",
         "pin NXP open-source projects in reviewed source lock",

@@ -6,6 +6,11 @@ manifest selects source from the component repositories, GitHub Actions builds
 the Android images, and the Foundries/Yocto repositories build the Linux host
 that runs them.
 
+Before triggering an expensive build, select the product lane and follow the
+fixed order in the [build and promotion plan](build-plan.md). That document is
+the authority for what is built locally, in GitHub Actions, in Foundries and on
+the physical machines.
+
 ## Validate the repository
 
 The lightweight checks need Git, Python 3 and Bash; they do not download the
@@ -85,6 +90,16 @@ For the Jaguar Screen i.MX8MM and FRDM i.MX95 paths, follow
 checksums, Foundries target, machine, distro, image, memory profile and build
 variant together as one product tuple. Never use an i.MX8MM vendor image as
 i.MX95 acceptance evidence.
+
+The current lanes are intentionally separate:
+
+| Machine | Ready now | Still required |
+| --- | --- | --- |
+| Jaguar Screen i.MX8MM | Proven R13 standard product; built R16 2 GB Android artifacts | Successful R16 screen-host target and a fresh physical-board test |
+| FRDM i.MX95 | Successful development host target 2936; shared R16 ARM64 system-image candidate | Board-specific i.MX95 Mali/Hantro vendor image and full hardware acceptance |
+
+See the README's [machine-specific status tables](../README.md#jaguar-screen--imx8mm)
+for the exact built, staged and working states.
 
 ## What success means
 

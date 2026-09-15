@@ -5,7 +5,19 @@ target: it may eventually share the architecture-independent Android system
 image, but it must have its own reviewed vendor image, GPU/VPU contract and
 board acceptance evidence. Do not deploy the i.MX8MM vendor image on i.MX95.
 
-## Current state
+## Board lanes at a glance
+
+| Machine | Working build | Staged candidate | Current boundary |
+| --- | --- | --- | --- |
+| Jaguar Screen i.MX8MM | R13 standard: Android run 34838947265 with Foundries target 2887 | R16 2 GB run 34856380503 was checksum-staged on target 2892 and rolled back | Needs a successful `platform-r16-jaguar-screen` host before another R16 board test |
+| FRDM i.MX95 | Foundries development host target 2936 | The R16 pair from run 34856380503 was exercised on FRDM | Shared `system.img` is usable for integration, but the i.MX8MM `vendor.img` is not an FRDM product image; build the i.MX95 Mali/Hantro vendor image |
+
+“Working build” in this table identifies the highest component gate that has
+passed. Only Jaguar R13 has passed the complete Android UI and acceleration
+board gate. FRDM target 2936 is a working host-build baseline, not a completed
+Android product.
+
+## Jaguar Screen current state
 
 The Android product `lineage_waydroid_aesl_2gb_arm64_only` is already defined.
 It is ARM64-only, Vanilla, low-RAM, PSI/lmkd tuned, Mesa Etnaviv/minigbm based,
@@ -66,38 +78,34 @@ RUNNING container/session states, while `sys.boot_completed` stayed empty and
 that state to replace the earlier target 2887 R13 PASS evidence, and do not
 perform another runtime transplant while the complete host build is pending.
 
-## Implementation sequence
+## Next Jaguar Screen action
 
-1. Dispatch **Build Android R16 / LineageOS 23.2 images** with
-   `build_scope=arm64_2gb` and `arm64_variant=userdebug`. Preserve
-   `build-info.json`, `SHA256SUMS`, SPDX,
-   NOTICE archives and `source-manifest.xml` with the two images.
-2. Update the Yocto Waydroid runtime to the reviewed Android 16-compatible
-   host implementation. Package pinned libgbinder 1.1.52 and libglibutil
-   1.0.82 revisions, AIDL6 service-manager selection and the
-   `id.waydro.waydroid.IPlatform` interface descriptor. Do not compile this
-   compatibility stack on the 2 GB target at first boot.
-3. Replace the Lineage 18.1 network downloads in `waydroid-data` with the
-   exact CI-produced `system.img` and i.MX8MM `vendor.img` checksums. Consume
-   `waydroid-images.inc`/`build-info.json`, and reject an integration artifact
-   when building a production host image.
-4. Remove the unconditional Vulkan requirement for the i.MX8MM product. The
-   host kernel and image must instead provide binderfs, cgroup v2, MEMCG, PSI,
-   zram, the selected DMA heaps, the Etnaviv DRM render node and the VSI V4L2
-   decoder node.
-5. Build the LmP/Yocto image with the `waydroid` distro feature on persistent
-   `/yocto` CI storage. Flash the i.MX8MM using its board-specific UUU family;
-   do not reuse i.MX95 layout, WKS, FIT or flash scripts.
-6. On the board, prove Android boot and UI first, then run
-   `/usr/libexec/waydroid-acceleration-check` after cold boot, container restart
-   and suspend/resume. Run `/usr/libexec/waydroid-memory-headroom` for idle,
-   steady-state and peak kiosk workloads and retain all reports.
-7. After integration passes, rebuild Android with `arm64_variant=user` and
-   repeat the board evidence as the production/SELinux release gate. Deliver
-   subsequent host updates through the LmP OSTree/OTA path; reserve UUU for
-   recovery or storage-layout changes.
+Follow the canonical [build and promotion plan](build-plan.md). Run 34856380503
+already supplies the checksum-proven R16 2 GB `userdebug` images, so do not
+rebuild Android for the current host-only fixes.
 
-## i.MX95 follow-on
+1. Produce a successful Foundries target from `r16-jaguar-screen` with the
+   reviewed Waydroid 1.6.3/AIDL6 and image-APEX host integration.
+2. Pair that exact target with run 34856380503 and verify its recorded image
+   checksums before staging.
+3. Stage only on the Jaguar Screen machine, retaining the working R13 rollback,
+   then prove Android boot, UI, Etnaviv/V4L2, memory and lifecycle behaviour.
+4. Only after `userdebug` integration passes, build the Android `user` variant
+   and repeat the release gates.
+
+## FRDM i.MX95 lane
+
+[Foundries target 2936](https://app.foundries.io/factories/dynamic-devices/targets/2936)
+from `main-imx95-frdm-devel` built successfully and supplied the updated
+Waydroid 1.6.3/AIDL6 host used for the FRDM integration test. The R16 image
+pair was staged far enough to start Android 16 userspace. That is useful host
+and image-APEX evidence, but it is not a complete FRDM Android build: the
+paired `vendor.img` from run 34856380503 targets i.MX8MM Etnaviv, while FRDM
+uses the i.MX95 DPU/Mali path. EGL therefore failed to create a configuration.
+
+The next Android artifact is an explicit i.MX95 Mali/Hantro vendor image,
+paired with the reviewed shared ARM64 system image and tested again on target
+2936 or its exact successor.
 
 Create an explicit i.MX95 Android product/vendor target only after identifying
 the shipping kernel DRM renderer, allocator handle layout, DMA heaps and VPU

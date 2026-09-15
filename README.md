@@ -16,6 +16,7 @@ matches what you are trying to do:
 | Goal | Start with |
 | --- | --- |
 | Understand the platform and current evidence | [Repository role](#repository-role), then the [build and board-test matrix](#build-and-board-test-status) |
+| See what we build, where and when | [Build and promotion plan](docs/build-plan.md) |
 | Validate a proposed change | [Getting started](docs/getting-started.md#validate-the-repository) and [Contributing](CONTRIBUTING.md) |
 | Build an Android R16 image | [Getting started](docs/getting-started.md#build-android-r16--lineageos-232) |
 | Work with the legacy R13 lane | [Getting started](docs/getting-started.md#legacy-android-r13--lineageos-20) |
@@ -120,6 +121,8 @@ supported-board or conformity decision.
 
 - [Getting started](docs/getting-started.md) gives the shortest route to local
   validation, CI image builds, artifacts and board integration.
+- [Build and promotion plan](docs/build-plan.md) is the canonical definition of
+  product lanes, build locations, trigger order and promotion gates.
 - [Android platform lifecycle](docs/android-platform-lifecycle.md) defines the
   maintained release line, product structure and board-support lifecycle.
 - [NXP board bring-up](docs/nxp-board-bringup.md) defines the separate i.MX8MM
@@ -150,7 +153,8 @@ product is CRA compliant. Android R13 / LineageOS 20 remains available in the
 legacy `android_vendor_waydroid` pipeline for potential customers with an
 existing compatibility or qualification requirement.
 
-The maintained ARM64 CI matrix is explicit:
+The ARM64 profile inventory is explicit; the active delivery priorities are
+defined separately in the [build and promotion plan](docs/build-plan.md):
 
 | Release | Profile | Build scope | Android product | Maintenance intent |
 | --- | --- | --- | --- | --- |
@@ -161,36 +165,59 @@ The maintained ARM64 CI matrix is explicit:
 
 ### Build and board-test status
 
-This is the current evidence matrix, modelled on the build-status table used by
-`DynamicDevices/meta-mono`. It deliberately separates an image build from a
-successful board boot: **PASS** means that the linked evidence completed for
-that column, **FAIL** means that the linked test exposed a reproducible
-blocker, and **NOT RUN** means no qualifying result has been recorded yet.
+Evidence reviewed: **2026-09-15**. The tables deliberately use different words
+for different gates:
 
-| Release | Profile | Image build | Jaguar Screen i.MX8MM boot | FRDM i.MX95 boot | Release intent |
-| --- | --- | --- | --- | --- | --- |
-| R13 / LineageOS 20 | `standard` | **PASS** ([run 34838947265](https://github.com/active-esl/android_vendor_waydroid/actions/runs/34838947265)) | **PASS** (Foundries target 2887: Android UI and Etnaviv acceleration at 1920x1200) | **NOT RUN** | Legacy customer qualification |
-| R13 / LineageOS 20 | `2gb` | **NOT RUN** | **NOT RUN** | **NOT RUN** | Legacy constrained products |
-| R16 / LineageOS 23.2 | `standard` | **NOT RUN** | **NOT RUN** | **NOT RUN** | Preferred maintained baseline |
-| R16 / LineageOS 23.2 | `2gb` | **PASS** ([run 34856380503](https://github.com/active-esl/waydroid-product-manifest/actions/runs/34856380503)) | **FAIL** (2026-09-14: target 2892 has Waydroid 1.4.2/libgbinder 1.1.35 and never exposes the Android 16 platform service; requires a complete 1.6.3/AIDL6 host build with image-APEX device mounts) | **FAIL** (2026-09-14: the i.MX8MM vendor image reaches Android 16 userspace after the image-APEX host fix, but cannot create an EGL configuration on the i.MX95 DPU-only DRM node) | Preferred constrained baseline |
+- **BUILT**: CI produced the expected component artifacts.
+- **STAGED**: the artifacts were installed or selected on that machine.
+- **WORKING**: the recorded board checks passed.
+- **BLOCKED**: a recorded failure prevents the next gate.
+- **NOT RUN**: no qualifying evidence exists.
 
-The status date is **2026-09-14**. Update a cell only from immutable CI or
-board-test evidence and link that evidence in the cell. A green image workflow
-does not imply a green host build, Android boot, hardware-acceleration test,
-OTA test, production release, or CRA conformity decision. R16 no longer
-supports the legacy flattened-APEX build mode, so its host acceptance path must
-provide narrowly scoped loop and device-mapper support rather than claiming
-that `OVERRIDE_TARGET_FLATTEN_APEX` changed the image format.
+#### Android image artifacts
 
-The active Jaguar integration tuple is
-`imx8mm-jaguar-screen-r16-waydroid-2gb-userdebug`, built on the isolated
-Foundries branch `r16-jaguar-screen` and reported as
-`platform-r16-jaguar-screen`. It is intentionally not a generic Jaguar host
-build and does not carry the production `main-jaguar-screen` OTA tag. No
-Foundries build becomes a PASS until it publishes a target and the paired host
-and Android artifacts pass the physical-board checks. The dated build-attempt,
-checksum and rollback evidence is retained in
-[NXP board bring-up](docs/nxp-board-bringup.md#jaguar-screen-evidence-log).
+The ARM64 `system.img` may be reusable at the release/profile level when its
+ABI is proven. A `vendor.img` remains SoC-specific.
+
+| Release and profile | Image result | Artifact suitability |
+| --- | --- | --- |
+| R13 / LineageOS 20 `standard` | **BUILT** — [run 34838947265](https://github.com/active-esl/android_vendor_waydroid/actions/runs/34838947265) | Proven with the Jaguar Screen i.MX8MM vendor path |
+| R13 / LineageOS 20 `2gb` | **NOT RUN** | Workflow input is not yet promoted to `lineage-20` |
+| R16 / LineageOS 23.2 `standard` | **NOT RUN** | No retained qualifying artifact |
+| R16 / LineageOS 23.2 `2gb` `userdebug` | **BUILT** — [run 34856380503](https://github.com/active-esl/waydroid-product-manifest/actions/runs/34856380503) | `system.img` is the shared ARM64 candidate; this run's `vendor.img` is i.MX8MM/Etnaviv-specific |
+
+#### Jaguar Screen — i.MX8MM
+
+| Product lane | Android images | Foundries host | Staging | Board result |
+| --- | --- | --- | --- | --- |
+| R13 standard working baseline | Run 34838947265 **BUILT** | [Target 2887](https://app.foundries.io/factories/dynamic-devices/targets/2887) **BUILT** | **STAGED** and tested | **WORKING** — Android UI and Etnaviv acceleration at 1920×1200 |
+| R16 2 GB integration candidate | Run 34856380503 **BUILT** | `platform-r16-jaguar-screen` **BLOCKED** — no successful target yet | Image pair was checksum-verified and temporarily **STAGED** on target 2892, then rolled back | **BLOCKED** — target 2892 has the old Waydroid 1.4.2/AIDL host stack |
+
+The R16 tuple is
+`imx8mm-jaguar-screen-r16-waydroid-2gb-userdebug`: machine
+`imx8mm-jaguar-screen`, distro `lmp-dynamicdevices`, image
+`lmp-factory-image`, product features `display android-container`, and the R16
+2 GB `userdebug` image pair. Its isolated Foundries branch is
+`r16-jaguar-screen`; it does not carry the production `main-jaguar-screen` OTA
+tag. The detailed attempt, checksum and rollback record is in
+[Jaguar Screen evidence](docs/nxp-board-bringup.md#jaguar-screen-evidence-log).
+
+#### FRDM — i.MX95
+
+| Product lane | Android images | Foundries host | Staging | Board result |
+| --- | --- | --- | --- | --- |
+| R16 host integration | R16 run 34856380503 was used for integration, but its `vendor.img` is for i.MX8MM | [Target 2936](https://app.foundries.io/factories/dynamic-devices/targets/2936) from `main-imx95-frdm-devel` **BUILT** | Host and R16 image pair were **STAGED** on FRDM | **BLOCKED after partial boot** — Android 16 userspace starts, but EGL fails on the DPU-only DRM node |
+| R16 complete FRDM product | Shared ARM64 `system.img` candidate exists; i.MX95 `vendor.img` **NOT BUILT** | Target 2936 is the usable development host baseline | **NOT STAGED** as a valid board-specific pair | **BLOCKED** pending the reviewed i.MX95 Mali/Hantro vendor image |
+
+In short: the Jaguar R13 tuple is the currently working screen build; the
+Jaguar R16 Android artifacts are ready for a corrected screen-host build; and
+the FRDM R16 host is working as an integration baseline but does not yet have
+the correct board-specific Android vendor image.
+
+A green image or host build does not imply Android boot, UI, acceleration,
+OTA, production release or CRA conformity. R16 uses image APEX, so its host
+must provide the required loop and device-mapper support; the removed
+`OVERRIDE_TARGET_FLATTEN_APEX` setting is not a fallback.
 
 Each scope has an independent Soong output cache and emits paired images,
 immutable source provenance, artifact-derived SPDX, NOTICE archives, build
