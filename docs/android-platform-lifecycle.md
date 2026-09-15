@@ -1,6 +1,6 @@
 # AESL Android platform lifecycle
 
-Updated: 2026-09-11
+Updated: 2026-09-15
 
 ## Product-line model
 
@@ -27,7 +27,30 @@ reviewed Android/Lineage core
 
 ARM64 is an instruction-set boundary, not a hardware compatibility guarantee.
 System content may be shared when its ABI is proven, but `vendor.img` is never
-promoted between SoC families.
+promoted between unproven hardware compatibility classes.
+
+The controlled build identity is the tuple:
+
+```text
+(Android release, system profile, vendor compatibility class, board profile, build variant)
+```
+
+- **System profile** captures architecture and cross-board policy such as the
+  2 GB kiosk constraints. Its `system.img` may be reused across i.MX8 and i.MX9
+  only when VINTF and runtime evidence prove the boundary.
+- **Vendor compatibility class** captures the SoC GPU/VPU/allocator/HAL stack
+  and its exact host-kernel ABI. Start with a separate class for each SoC; merge
+  classes only after binary and hardware evidence shows them equivalent.
+- **Board profile** captures ODM/carrier-board differences such as display,
+  touch, audio, camera, radio, firmware and exposed device nodes. A board gets a
+  separate vendor/ODM build whenever those differences change Android content.
+- **Build variant** keeps `userdebug` integration evidence distinct from the
+  production-gated `user` release.
+
+The initial classes are i.MX8MM/Mesa-Etnaviv/V4L2 for Jaguar Screen and
+i.MX95/NXP-Mali/Hantro for FRDM i.MX95. Further i.MX8 and i.MX9 SoCs enter as
+separate candidate classes; family membership alone is not evidence that an
+existing vendor image is reusable.
 
 ## Lifecycle records
 
