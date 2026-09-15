@@ -33,6 +33,14 @@ The support commitment covers the complete field-update bundle: host Linux and
 kernel, Waydroid runtime, Android system and board-specific vendor image,
 firmware, boot chain and AESL applications.
 
+Android R16 / LineageOS 23.2 is the preferred maintained baseline for new
+AESL products over that 5+ year engineering horizon. Both its `standard` and
+`2gb` ARM64 profiles must remain reproducible and security-fixable from the
+same reviewed core. Android R13 / LineageOS 20 is retained separately for
+potential legacy customer requirements. Any R13 support commitment requires a
+specific product feasibility and lifetime decision; availability of a CI
+build alone is not such a commitment.
+
 ## Annex I engineering gap register
 
 | Area | Required platform evidence | Current state | Gate |

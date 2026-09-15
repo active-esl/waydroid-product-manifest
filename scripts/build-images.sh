@@ -3,9 +3,10 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 android_dir="${ANDROID_WORKSPACE:-/yocto/android-16-source}"
-out_dir="${ANDROID_OUT_DIR:-${android_dir}/out}"
+x86_64_out_dir="${ANDROID_X86_64_OUT_DIR:-${android_dir}/out-x86_64}"
 x86_64_2gb_out_dir="${ANDROID_X86_64_2GB_OUT_DIR:-${android_dir}/out-x86_64-2gb}"
-imx8mm_out_dir="${ANDROID_IMX8MM_OUT_DIR:-${android_dir}/out-imx8mm}"
+arm64_standard_out_dir="${ANDROID_ARM64_STANDARD_OUT_DIR:-${android_dir}/out-arm64-standard}"
+arm64_2gb_out_dir="${ANDROID_ARM64_2GB_OUT_DIR:-${ANDROID_IMX8MM_OUT_DIR:-${android_dir}/out-arm64-2gb}}"
 artifact_dir="${OUTPUT_DIR:-/yocto/android-16-artifacts/local}"
 manifest_cache_dir="${ANDROID_MANIFEST_CACHE_DIR:-/yocto/android-16-manifests}"
 lock_file="${SOURCE_LOCK:-${repo_root}/locks/lineage-23.2-lock.xml}"
@@ -15,23 +16,30 @@ meson_version="1.7.2"
 meson_sha256="82c6818dc81743c96de3a458f06175776ebfde4081195ea31ea6971838f25e38"
 meson_url="https://files.pythonhosted.org/packages/e5/2b/46bda4ef5a7ae4135dbfe27fc0368c44e5a349a897a54fdf2cedb8dcb66e/meson-1.7.2-py3-none-any.whl"
 meson_tool_dir="/yocto/android-ci-tools/meson-${meson_version}"
-imx8mm_build_variant="${IMX8MM_BUILD_VARIANT:-userdebug}"
+arm64_build_variant="${ARM64_BUILD_VARIANT:-${IMX8MM_BUILD_VARIANT:-userdebug}}"
 build_scope="${BUILD_SCOPE:-all}"
 force_full_sync="${FORCE_FULL_SYNC:-false}"
 [[ "${jobs}" =~ ^[1-9][0-9]*$ ]] \
     || { echo "JOBS must be a positive integer" >&2; exit 1; }
 python3 "${repo_root}/scripts/validate-board-support.py" \
     "${repo_root}/config/board-support.json"
-case "${imx8mm_build_variant}" in
+case "${arm64_build_variant}" in
     user|userdebug) ;;
-    *) echo "IMX8MM_BUILD_VARIANT must be user or userdebug" >&2; exit 1 ;;
+    *) echo "ARM64_BUILD_VARIANT must be user or userdebug" >&2; exit 1 ;;
 esac
 case "${build_scope}" in
     all)
         targets=(
             lineage_waydroid_x86_64-bp4a-userdebug
-            "lineage_waydroid_aesl_2gb_arm64_only-bp4a-${imx8mm_build_variant}"
+            "lineage_waydroid_arm64_only-bp4a-${arm64_build_variant}"
+            "lineage_waydroid_aesl_2gb_arm64_only-bp4a-${arm64_build_variant}"
         )
+        ;;
+    arm64_standard)
+        targets=("lineage_waydroid_arm64_only-bp4a-${arm64_build_variant}")
+        ;;
+    arm64_2gb|imx8mm)
+        targets=("lineage_waydroid_aesl_2gb_arm64_only-bp4a-${arm64_build_variant}")
         ;;
     x86_64)
         targets=(lineage_waydroid_x86_64-bp4a-userdebug)
@@ -39,10 +47,7 @@ case "${build_scope}" in
     x86_64_2gb)
         targets=(lineage_waydroid_aesl_2gb_x86_64-bp4a-userdebug)
         ;;
-    imx8mm)
-        targets=("lineage_waydroid_aesl_2gb_arm64_only-bp4a-${imx8mm_build_variant}")
-        ;;
-    *) echo "BUILD_SCOPE must be all, x86_64, x86_64_2gb or imx8mm" >&2; exit 1 ;;
+    *) echo "BUILD_SCOPE must be all, arm64_standard, arm64_2gb, x86_64 or x86_64_2gb" >&2; exit 1 ;;
 esac
 
 die() { echo "$*" >&2; exit 1; }
@@ -172,18 +177,23 @@ for command in repo git python3 sha256sum timeout ps; do
     command -v "${command}" >/dev/null || die "required command missing: ${command}"
 done
 [[ "${android_dir}" == /yocto/* ]] || die "ANDROID_WORKSPACE must be under /yocto"
-[[ "${out_dir}" == "${android_dir}"/* ]] || die "ANDROID_OUT_DIR must be inside ANDROID_WORKSPACE"
+[[ "${x86_64_out_dir}" == "${android_dir}"/* ]] \
+    || die "ANDROID_X86_64_OUT_DIR must be inside ANDROID_WORKSPACE"
 [[ "${x86_64_2gb_out_dir}" == "${android_dir}"/* ]] \
     || die "ANDROID_X86_64_2GB_OUT_DIR must be inside ANDROID_WORKSPACE"
-[[ "${imx8mm_out_dir}" == "${android_dir}"/* ]] \
-    || die "ANDROID_IMX8MM_OUT_DIR must be inside ANDROID_WORKSPACE"
+[[ "${arm64_standard_out_dir}" == "${android_dir}"/* ]] \
+    || die "ANDROID_ARM64_STANDARD_OUT_DIR must be inside ANDROID_WORKSPACE"
+[[ "${arm64_2gb_out_dir}" == "${android_dir}"/* ]] \
+    || die "ANDROID_ARM64_2GB_OUT_DIR must be inside ANDROID_WORKSPACE"
 [[ "${artifact_dir}" == /yocto/* ]] || die "OUTPUT_DIR must be under /yocto"
 [[ "${manifest_cache_dir}" == /yocto/* ]] || die "ANDROID_MANIFEST_CACHE_DIR must be under /yocto"
 [[ -s "${lock_file}" ]] || die "reviewed source lock missing: ${lock_file}"
 [[ -s "${source_date_epoch_file}" ]] || die "stable source-date epoch missing: ${source_date_epoch_file}"
 python3 "${repo_root}/scripts/validate-lock.py" "${lock_file}"
 
-mkdir -p "${android_dir}" "${out_dir}" "${imx8mm_out_dir}" "${artifact_dir}" "${manifest_cache_dir}"
+mkdir -p "${android_dir}" "${x86_64_out_dir}" "${x86_64_2gb_out_dir}" \
+    "${arm64_standard_out_dir}" "${arm64_2gb_out_dir}" "${artifact_dir}" \
+    "${manifest_cache_dir}"
 source_cache_evidence="${artifact_dir}/source-cache-evidence.txt"
 target_cache_evidence="${artifact_dir}/target-cache-evidence.tsv"
 printf 'phase\ttarget\tcache_present_before\tbytes_before\tmtime_before\tbytes_after\tmtime_after\telapsed_seconds\n' \
@@ -364,12 +374,16 @@ for target in "${targets[@]}"; do
             target_artifacts="${artifact_dir}/x86_64_2gb"
             ;;
         *x86_64*)
-            target_out_dir="${out_dir}"
+            target_out_dir="${x86_64_out_dir}"
             target_artifacts="${artifact_dir}/x86_64"
             ;;
         *aesl_2gb_arm64_only*)
-            target_out_dir="${imx8mm_out_dir}"
-            target_artifacts="${artifact_dir}/imx8mm"
+            target_out_dir="${arm64_2gb_out_dir}"
+            target_artifacts="${artifact_dir}/arm64_2gb"
+            ;;
+        *arm64_only*)
+            target_out_dir="${arm64_standard_out_dir}"
+            target_artifacts="${artifact_dir}/arm64_standard"
             ;;
         *) die "unrecognised target: ${target}" ;;
     esac
@@ -432,18 +446,25 @@ install -m 0644 "${lock_file}" "${artifact_dir}/source-manifest.xml"
 python3 "${repo_root}/scripts/write-build-info.py" \
     --output "${artifact_dir}/build-info.json" \
     --source-lock "${lock_file}" \
-    --imx8mm-variant "${imx8mm_build_variant}" \
+    --arm64-variant "${arm64_build_variant}" \
     --targets "${targets[@]}"
-if [[ -d "${artifact_dir}/imx8mm" ]]; then
-    system_sha=$(sha256sum "${artifact_dir}/imx8mm/system.img" | cut -d' ' -f1)
-    vendor_sha=$(sha256sum "${artifact_dir}/imx8mm/vendor.img" | cut -d' ' -f1)
-    sbom_sha=$(sha256sum "${artifact_dir}/imx8mm/sbom.spdx.json" | cut -d' ' -f1)
-    system_notice_sha=$(sha256sum "${artifact_dir}/imx8mm/NOTICE-system.xml.gz" | cut -d' ' -f1)
-    vendor_notice_sha=$(sha256sum "${artifact_dir}/imx8mm/NOTICE-vendor.xml.gz" | cut -d' ' -f1)
+arm64_profile_dir=
+if [[ -d "${artifact_dir}/arm64_2gb" && ! -d "${artifact_dir}/arm64_standard" ]]; then
+    arm64_profile_dir=arm64_2gb
+elif [[ -d "${artifact_dir}/arm64_standard" && ! -d "${artifact_dir}/arm64_2gb" ]]; then
+    arm64_profile_dir=arm64_standard
+fi
+if [[ -n "${arm64_profile_dir}" ]]; then
+    system_sha=$(sha256sum "${artifact_dir}/${arm64_profile_dir}/system.img" | cut -d' ' -f1)
+    vendor_sha=$(sha256sum "${artifact_dir}/${arm64_profile_dir}/vendor.img" | cut -d' ' -f1)
+    sbom_sha=$(sha256sum "${artifact_dir}/${arm64_profile_dir}/sbom.spdx.json" | cut -d' ' -f1)
+    system_notice_sha=$(sha256sum "${artifact_dir}/${arm64_profile_dir}/NOTICE-system.xml.gz" | cut -d' ' -f1)
+    vendor_notice_sha=$(sha256sum "${artifact_dir}/${arm64_profile_dir}/NOTICE-vendor.xml.gz" | cut -d' ' -f1)
     source_manifest_sha=$(sha256sum "${artifact_dir}/source-manifest.xml" | cut -d' ' -f1)
     build_info_sha=$(sha256sum "${artifact_dir}/build-info.json" | cut -d' ' -f1)
     printf '%s\n' \
         '# Generated by the reviewed AESL Android 16 image build.' \
+        "AESL_WAYDROID_MEMORY_PROFILE = \"${arm64_profile_dir#arm64_}\"" \
         "AESL_WAYDROID_SYSTEM_SHA256 = \"${system_sha}\"" \
         "AESL_WAYDROID_VENDOR_SHA256 = \"${vendor_sha}\"" \
         "AESL_WAYDROID_SBOM_SHA256 = \"${sbom_sha}\"" \

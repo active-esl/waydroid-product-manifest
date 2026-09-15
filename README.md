@@ -4,8 +4,8 @@ This repository owns the reviewed, immutable source manifests used to build
 Active ESL Waydroid product images.
 
 [![Repository governance](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/governance.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/governance.yml)
-[![Build locked Android 16 images](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml)
-[![Resolve Android 16 source lock](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml)
+[![Build Android R16 / LineageOS 23.2 images](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml)
+[![Resolve Android R16 / LineageOS 23.2 source lock](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml)
 
 ## Repository role
 
@@ -115,6 +115,73 @@ supported-board or conformity decision.
 - Initial vendor commit: `d39b2f967d7e54642d674030b1bc1310cdb7b93b`
 - Product variants: Vanilla x86_64 validation, then Vanilla ARM64
 
+## Maintained release and memory profiles
+
+AESL targets Android R16 / LineageOS 23.2 as the maintainable baseline for new
+CRA-oriented product work over a declared support period of at least five
+years. This is an engineering support objective, not a claim that a build or
+product is CRA compliant. Android R13 / LineageOS 20 remains available in the
+legacy `android_vendor_waydroid` pipeline for potential customers with an
+existing compatibility or qualification requirement.
+
+The maintained ARM64 CI matrix is explicit:
+
+| Release | Profile | Build scope | Android product | Maintenance intent |
+| --- | --- | --- | --- | --- |
+| R13 / LineageOS 20 | `standard` | R13 `memory_profile=standard` | `lineage_waydroid_arm64` | Legacy customer qualification |
+| R13 / LineageOS 20 | `2gb` | R13 `memory_profile=2gb` | `lineage_waydroid_aesl_2gb_arm64_only` | Legacy constrained products |
+| R16 / LineageOS 23.2 | `standard` | `arm64_standard` | `lineage_waydroid_arm64_only` | Preferred maintained baseline |
+| R16 / LineageOS 23.2 | `2gb` | `arm64_2gb` | `lineage_waydroid_aesl_2gb_arm64_only` | Preferred constrained baseline |
+
+### Build and board-test status
+
+This is the current evidence matrix, modelled on the build-status table used by
+`DynamicDevices/meta-mono`. It deliberately separates an image build from a
+successful board boot: **PASS** means that the linked evidence completed for
+that column, **FAIL** means that the linked test exposed a reproducible
+blocker, and **NOT RUN** means no qualifying result has been recorded yet.
+
+| Release | Profile | Image build | Jaguar Screen i.MX8MM boot | FRDM i.MX95 boot | Release intent |
+| --- | --- | --- | --- | --- | --- |
+| R13 / LineageOS 20 | `standard` | **PASS** ([run 34838947265](https://github.com/active-esl/android_vendor_waydroid/actions/runs/34838947265)) | **PASS** (Foundries target 2887: Android UI and Etnaviv acceleration at 1920x1200) | **NOT RUN** | Legacy customer qualification |
+| R13 / LineageOS 20 | `2gb` | **NOT RUN** | **NOT RUN** | **NOT RUN** | Legacy constrained products |
+| R16 / LineageOS 23.2 | `standard` | **NOT RUN** | **NOT RUN** | **NOT RUN** | Preferred maintained baseline |
+| R16 / LineageOS 23.2 | `2gb` | **PASS** ([run 34856380503](https://github.com/active-esl/waydroid-product-manifest/actions/runs/34856380503)) | **FAIL** (2026-09-14: target 2892 has Waydroid 1.4.2/libgbinder 1.1.35 and never exposes the Android 16 platform service; requires a complete 1.6.3/AIDL6 host build with image-APEX device mounts) | **FAIL** (2026-09-14: the i.MX8MM vendor image reaches Android 16 userspace after the image-APEX host fix, but cannot create an EGL configuration on the i.MX95 DPU-only DRM node) | Preferred constrained baseline |
+
+The status date is **2026-09-14**. Update a cell only from immutable CI or
+board-test evidence and link that evidence in the cell. A green image workflow
+does not imply a green host build, Android boot, hardware-acceleration test,
+OTA test, production release, or CRA conformity decision. R16 no longer
+supports the legacy flattened-APEX build mode, so its host acceptance path must
+provide narrowly scoped loop and device-mapper support rather than claiming
+that `OVERRIDE_TARGET_FLATTEN_APEX` changed the image format.
+
+The replacement Jaguar host build was dispatched on the isolated Foundries
+branch `r16-jaguar-host` from signed manifest commit `0ef0782`. It pins the
+Android 16 host integration at signed partner-layer commit `61b4b6d` and does
+not carry the board's `main-jaguar-screen` OTA tag. Until Foundries publishes a
+successful target and that target passes the physical test, the Jaguar R16
+matrix cell remains **FAIL**.
+
+The 2026-09-14 Jaguar test staged the exact run 34856380503 image pair under a
+separate release directory and verified SHA-256 values
+`5aca4e74552d938d1ec867034e87c780340f6d8fafd9b4181b2852b1ef68e1b8`
+(`system.img`) and
+`7337a60ad6230b7ada906cef9a72ec0048255776b70444c353907b946d677d53`
+(`vendor.img`) on the board before cutover. The preserved R13 image link was
+restored after the failed test. That rollback is reversible storage evidence,
+not a fresh R13 acceptance result: on the 2026-09-14 post-reboot check, target
+2892 reported Android 13 with the container and session running, but
+`sys.boot_completed` remained empty and the UI unit failed while waiting for
+`waydroidplatform`. The matrix PASS remains the earlier immutable target 2887
+result. Do not repeat the R16 image swap on target 2892; build and install the
+complete maintained host runtime first.
+
+Each scope has an independent Soong output cache and emits paired images,
+immutable source provenance, artifact-derived SPDX, NOTICE archives, build
+metadata and complete checksums. Hardware support and a commercial support
+period still attach to an accepted whole-product release, not to this matrix.
+
 The files under `overlays/lineage-23.2` are bootstrap inputs only. Branch
 names are permitted there because the resolver converts the complete checkout
 into a flattened manifest containing commit hashes. Product image builds must
@@ -123,7 +190,7 @@ bootstrap overlays.
 
 ## Resolve a candidate lock
 
-Run the **Resolve Android 16 source lock** workflow. It synchronises the
+Run the **Resolve Android R16 / LineageOS 23.2 source lock** workflow. It synchronises the
 LineageOS and Waydroid source graph, writes `lineage-23.2-lock.xml`, and rejects
 the result unless every project revision is a full Git commit hash.
 
@@ -131,23 +198,24 @@ Review the workflow artifact before committing it to
 `locks/lineage-23.2-lock.xml`. Updating that file is a controlled source-base
 change and should be performed independently of an image release.
 
-The **Build locked Android 16 images** workflow refuses to build without that
-reviewed lock. It builds the x86_64 compatibility target first and the AESL
-i.MX8MM ARM64-only target second, generates an SPDX SBOM for each, and records
+The **Build Android R16 / LineageOS 23.2 images** workflow refuses to build without that
+reviewed lock. Its `all` scope builds the x86_64 compatibility target plus the
+standard and 2 GB ARM64 targets, generates an SPDX SBOM for each, and records
 the system and vendor NOTICE licence archives, checksums and immutable build
 metadata with the images. Development
 `userdebug` output is evidence for integration only; a production release must
 also pass the `user` target and the board acceptance procedure.
-Select the `user` i.MX8MM variant when manually dispatching the image workflow;
+Select the `user` ARM64 variant when manually dispatching the image workflow;
 that path invokes the blocking runtime-SELinux exception decision as well as
 the normal neverallow build checks. The default `userdebug` path inventories
 the exception but cannot produce production-approved release evidence.
-`build-info.json` records the selected i.MX8MM variant, release class and
+`build-info.json` records the selected ARM64 variant, memory profile, release class and
 SELinux gate mode so the Yocto host build can reject an integration artifact
 when producing a production image.
 
-After the x86_64 lane has already passed, select the `imx8mm` build scope to
-resume a failed board-image build without repeating the compatibility lane.
+After the x86_64 lane has already passed, select `arm64_standard` or
+`arm64_2gb` to rebuild only the required maintained profile without repeating
+the compatibility lane.
 The normal release-validation scope remains `all`.
 
 ## Framework x86_64 smoke test
@@ -206,10 +274,11 @@ checks shell and Python syntax, immutable source-lock validation and the
 supported-board register. The image workflow separately regression-tests its
 CI resource policy before starting a build.
 
-**Resolve Android 16 source lock** and **Build locked Android 16 images** are
+**Resolve Android R16 / LineageOS 23.2 source lock** and
+**Build Android R16 / LineageOS 23.2 images** are
 manually dispatched because they operate the controlled release process and
 use the dedicated Android build runner. The image workflow supports `all`,
-`x86_64`, `x86_64_2gb` and `imx8mm` scopes. Its 24-hour timeout accommodates a
+`arm64_standard`, `arm64_2gb`, `x86_64` and `x86_64_2gb` scopes. Its 24-hour timeout accommodates a
 cold target-specific output tree; subsequent runs reuse the persistent
 incremental state under `/yocto`.
 
