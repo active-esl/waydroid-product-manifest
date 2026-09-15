@@ -279,7 +279,7 @@ fi
 printf '%s\n' "${lock_sha}" > .repo/aesl-source-lock.sha256
 install -m 0644 "${lock_file}" "${previous_lock}"
 
-if [[ "${imx8mm_build_variant}" == user ]]; then
+if [[ "${arm64_build_variant}" == user ]]; then
     echo "Running the SELinux production gate"
     python3 "${android_dir}/vendor/extra/scripts/check-selinux-runtime-gate.py" --production
 else
