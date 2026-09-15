@@ -20,6 +20,10 @@ image APEX. Those changes exist in the product integration source but have not
 been delivered in the Jaguar Foundries image. This is a host-build blocker,
 not a reason to rebuild the already checksum-proven Android image.
 
+## Jaguar Screen evidence log
+
+Evidence reviewed: 2026-09-15.
+
 The candidate is the explicit product tuple
 `imx8mm-jaguar-screen-r16-waydroid-2gb-userdebug`: machine
 `imx8mm-jaguar-screen`, distro `lmp-dynamicdevices`, image
@@ -43,7 +47,10 @@ suppression, exception handling or an arbitrary mask that drops required
 functionality.
 Partner commit `3d33e23` establishes OE-Core as the sole native U-Boot tools
 owner and uses the effective recipe-specific AppArmor clang override.
-Foundries attempt 2939 is the pending verification build.
+Attempt 2939 had not published a Foundries target at this evidence review, so
+it is not a successful host build or board-test result. Retain its complete CI
+result before changing that verdict; never infer success from the absence of a
+target or from a later BitBake task running.
 
 The 2026-09-14 manual test of R16 2 GB run 34856380503 on the physical Jaguar
 screen machine confirmed that Binder appears but `waydroidplatform` never
