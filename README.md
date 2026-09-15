@@ -4,6 +4,7 @@ This repository owns the reviewed, immutable source manifests used to build
 Active ESL Waydroid product images.
 
 [![Repository governance](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/governance.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/governance.yml)
+[![Build Android R13 / LineageOS 20 ARM64 images](https://github.com/active-esl/android_vendor_waydroid/actions/workflows/build-images.yml/badge.svg?branch=lineage-20)](https://github.com/active-esl/android_vendor_waydroid/actions/workflows/build-images.yml?query=branch%3Alineage-20)
 [![Build Android R16 / LineageOS 23.2 images](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/build-lineage-23.2-images.yml)
 [![Resolve Android R16 / LineageOS 23.2 source lock](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml/badge.svg?branch=main)](https://github.com/active-esl/waydroid-product-manifest/actions/workflows/resolve-lineage-23.2-lock.yml)
 
@@ -156,12 +157,30 @@ supports the legacy flattened-APEX build mode, so its host acceptance path must
 provide narrowly scoped loop and device-mapper support rather than claiming
 that `OVERRIDE_TARGET_FLATTEN_APEX` changed the image format.
 
-The replacement Jaguar host build was dispatched on the isolated Foundries
-branch `r16-jaguar-host` from signed manifest commit `0ef0782`. It pins the
-Android 16 host integration at signed partner-layer commit `61b4b6d` and does
-not carry the board's `main-jaguar-screen` OTA tag. Until Foundries publishes a
+The candidate product tuple is
+`imx8mm-jaguar-screen-r16-waydroid-2gb-userdebug`: machine
+`imx8mm-jaguar-screen`, distro `lmp-dynamicdevices`, image
+`lmp-factory-image`, product features `display android-container`, and the R16
+/ LineageOS 23.2 2 GB `userdebug` image pair. Foundries attempts 2935 and 2937
+used the historical branch `r16-jaguar-host`; retain that name only when
+referencing those runs. The corrected branch is `r16-jaguar-screen`, reported
+by Foundries as `platform-r16-jaguar-screen`, because this is a complete
+screen-hardware product rather than a generic host build. It remains isolated
+from the board's `main-jaguar-screen` OTA tag. Until Foundries publishes a
 successful target and that target passes the physical test, the Jaguar R16
 matrix cell remains **FAIL**.
+
+Foundries attempt 2938 exposed an additional blocking error during task
+initialisation: both OE-Core `u-boot-tools_2024.01.bb` and partner
+`u-boot-imx-tools_2025.04.bb` were scheduled while providing
+`u-boot-tools-native` and its mkimage/mkenvimage/mkeficapsule capabilities.
+Do not suppress, filter or downgrade this message because BitBake continues to
+a later task. Every distinct `ERROR:` block remains part of the build verdict
+until its provider ownership is resolved without removing capabilities needed
+by either the LmP boot/FIT path or NXP `imx-boot`.
+Partner commit `3d33e23` removes the unintended native extension, gives
+OE-Core sole ownership of those host tools, and corrects the AppArmor clang
+override. Foundries attempt 2939 is the pending verification build.
 
 The 2026-09-14 Jaguar test staged the exact run 34856380503 image pair under a
 separate release directory and verified SHA-256 values

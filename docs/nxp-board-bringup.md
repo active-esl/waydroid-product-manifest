@@ -20,13 +20,30 @@ image APEX. Those changes exist in the product integration source but have not
 been delivered in the Jaguar Foundries image. This is a host-build blocker,
 not a reason to rebuild the already checksum-proven Android image.
 
-A candidate host build was dispatched on 2026-09-14 using the isolated
-Foundries branch `r16-jaguar-host`. Signed manifest commit `0ef0782` adds the
-partner layer pinned at signed commit `61b4b6d`; the latter supplies Waydroid
-1.6.3, the AIDL6 Binder stack, writable Android metadata and the narrowly
-scoped loop/device-mapper access needed by image APEX. The build branch is
-deliberately separate from `main-jaguar-screen`, so publication alone cannot
-move the lab board. A published target remains pending.
+The candidate is the explicit product tuple
+`imx8mm-jaguar-screen-r16-waydroid-2gb-userdebug`: machine
+`imx8mm-jaguar-screen`, distro `lmp-dynamicdevices`, image
+`lmp-factory-image`, product features `display android-container`, and the R16
+/ LineageOS 23.2 2 GB `userdebug` image pair. The initial Foundries attempts
+used the historical branch name `r16-jaguar-host`; attempts 2935 and 2937 must
+retain that identifier in evidence. New attempts use `r16-jaguar-screen`,
+reported by Foundries as `platform-r16-jaguar-screen`, because the build is
+specific to the Jaguar Screen hardware and display path. The branch remains
+separate from `main-jaguar-screen`, so publication alone cannot move the lab
+board. A published target remains pending.
+
+Foundries attempt 2938 is also blocked by competing native U-Boot tool
+providers: OE-Core `u-boot-tools_2024.01.bb` and partner
+`u-boot-imx-tools_2025.04.bb` are both scheduled and both provide
+`u-boot-tools-native` plus the related mkimage, mkenvimage and mkeficapsule
+capabilities. Treat the complete provider error as build evidence even if
+BitBake proceeds afterward. It must be fixed by establishing one coherent
+provider contract for all dependees; never hide it with log filtering, QA
+suppression, exception handling or an arbitrary mask that drops required
+functionality.
+Partner commit `3d33e23` establishes OE-Core as the sole native U-Boot tools
+owner and uses the effective recipe-specific AppArmor clang override.
+Foundries attempt 2939 is the pending verification build.
 
 The 2026-09-14 manual test of R16 2 GB run 34856380503 on the physical Jaguar
 screen machine confirmed that Binder appears but `waydroidplatform` never
