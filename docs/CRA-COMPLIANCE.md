@@ -1,6 +1,6 @@
 # Cyber Resilience Act readiness — AESL Android platform
 
-Assessment date: 2026-09-11  
+Assessment date: 2026-09-15
 Status: engineering readiness plan; not a declaration of conformity  
 Owner: Active ESL product security function (named owner to be assigned)
 
@@ -51,7 +51,7 @@ build alone is not such a commitment.
 | Attack-surface reduction | disabled unused packages/interfaces and exposed-port inventory | i.MX8MM profile started | per-board interface inventory |
 | Security updates | authenticated update, rollback and recovery | host-managed bundle defined | board update and rollback tests |
 | Vulnerability handling | intake, assessment, remediation, disclosure and records | process below is draft | exercised tabletop and contact publication |
-| Supply-chain transparency | immutable source lock, SPDX SBOM, NOTICE and binary provenance | implemented for current builds | include NXP proprietary overlay hashes/licences |
+| Supply-chain transparency | immutable source lock, artifact-derived SPDX, NOTICE, signed provenance and binary-risk decisions | R16 provenance workflow implemented for future runs; historical runs are checksum-only | verify first attested build, add R13 parity, Foundries host export and binary risk register |
 | Security logging | actionable logs without unnecessary personal data | not baselined | logging/privacy specification and retention test |
 
 ## Vulnerability and incident runbook
@@ -77,10 +77,14 @@ build alone is not such a commitment.
    by the named owner, and the technical file and support register are updated.
 
 Run a tabletop before the first pilot release and at least annually thereafter.
-The runbook must include ENISA/SRB operational access and named out-of-hours
+The runbook must include ENISA/SRP operational access and named out-of-hours
 contacts; repository text alone is not proof the reporting path works.
 
 ## Release evidence pack
+
+The machine-verifiable pack contract and matrix gaps are maintained in
+[`attested-build-evidence.md`](attested-build-evidence.md). Attestation is an
+integrity/provenance control within this pack, not a conformity verdict.
 
 Each board release retains, for the required technical-file period:
 

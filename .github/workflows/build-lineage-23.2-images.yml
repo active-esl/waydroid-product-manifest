@@ -26,6 +26,8 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
 
 concurrency:
   group: build-lineage-23.2-images
@@ -40,7 +42,7 @@ jobs:
     # reuse the persistent /yocto output tree.
     timeout-minutes: 1440
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Regression-test source lock validation
         run: python3 scripts/test-validate-lock.py
       - name: Regression-test Android CI resource policy
@@ -74,7 +76,19 @@ jobs:
           ARM64_BUILD_VARIANT: ${{ inputs.arm64_variant }}
           BUILD_SCOPE: ${{ inputs.build_scope }}
         run: scripts/build-images.sh
-      - uses: actions/upload-artifact@v7
+      - name: Attest Android R16 build provenance
+        id: attest-provenance
+        if: success()
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-checksums: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}/SHA256SUMS
+      - name: Retain signed provenance bundle with release evidence
+        if: success()
+        env:
+          ATTESTATION_BUNDLE: ${{ steps.attest-provenance.outputs.bundle-path }}
+          OUTPUT_DIR: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
+        run: install -m 0644 "${ATTESTATION_BUNDLE}" "${OUTPUT_DIR}/provenance.sigstore.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()
         with:
           name: aesl-android-r16-lineage-23.2-${{ github.run_id }}-${{ github.run_attempt }}

@@ -21,8 +21,14 @@ def main() -> int:
         "    timeout-minutes: 1440",
         '          JOBS: "6"',
         "          SOONG_GOMEMLIMIT: 28GiB",
-        "      - uses: actions/checkout@v7",
-        "      - uses: actions/upload-artifact@v7",
+        "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7",
+        "      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7",
+        "  id-token: write",
+        "  attestations: write",
+        "        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4",
+        "          subject-checksums: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}/SHA256SUMS",
+        '          ATTESTATION_BUNDLE: ${{ steps.attest-provenance.outputs.bundle-path }}',
+        '"${OUTPUT_DIR}/provenance.sigstore.json"',
     )
     for line in expected_workflow_lines:
         assert workflow.count(line) == 1, f"missing or duplicate workflow policy: {line}"
@@ -59,6 +65,9 @@ def main() -> int:
         )
     assert "actions/checkout@v4" not in workflow_corpus
     assert "actions/upload-artifact@v4" not in workflow_corpus
+    assert "actions/attest@v4" not in workflow_corpus
+    assert "actions/checkout@v7" not in workflow_corpus
+    assert "actions/upload-artifact@v7" not in workflow_corpus
 
     print("Android CI resource-policy regression tests passed")
     return 0

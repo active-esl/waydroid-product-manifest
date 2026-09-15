@@ -25,5 +25,8 @@ jobs:
       - name: Test immutable source-lock validation
         run: python3 scripts/test-validate-lock.py
 
+      - name: Test Android CI and attestation policy
+        run: python3 scripts/test-build-resource-policy.py
+
       - name: Validate board support register
         run: python3 scripts/validate-board-support.py

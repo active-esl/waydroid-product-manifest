@@ -51,7 +51,9 @@ image.
    service, UI, correct hardware renderer, media path and bounded memory proof.
 8. **Promote only after integration passes.** Rebuild the Android ARM64 lane as
    `user`, build the release host, and add OTA/rollback, signing, SBOM, licence
-   and vulnerability evidence.
+   and vulnerability evidence. Follow the
+   [attested build evidence programme](attested-build-evidence.md); production
+   candidates without verified provenance remain blocked.
 
 Every `ERROR:` block from Android, BitBake or Foundries CI is part of the build
 verdict. Never hide, filter, downgrade or infer success past an error.

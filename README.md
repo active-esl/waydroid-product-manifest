@@ -123,6 +123,9 @@ supported-board or conformity decision.
   validation, CI image builds, artifacts and board integration.
 - [Build and promotion plan](docs/build-plan.md) is the canonical definition of
   product lanes, build locations, trigger order and promotion gates.
+- [Attested build evidence](docs/attested-build-evidence.md) defines the
+  provenance, SBOM, host, pairing and hardware evidence required before a
+  product tuple enters the CRA process.
 - [Android platform lifecycle](docs/android-platform-lifecycle.md) defines the
   maintained release line, product structure and board-support lifecycle.
 - [NXP board bring-up](docs/nxp-board-bringup.md) defines the separate i.MX8MM
@@ -312,9 +315,9 @@ production image.
 ## CI workflows
 
 **Repository governance** runs for pull requests and pushes to `main`. It
-checks shell and Python syntax, immutable source-lock validation and the
-supported-board register. The image workflow separately regression-tests its
-CI resource policy before starting a build.
+checks shell and Python syntax, immutable source-lock validation, Android CI
+and attestation policy, and the supported-board register. The image workflow
+repeats its CI policy test before starting an expensive build.
 
 **Resolve Android R16 / LineageOS 23.2 source lock** and
 **Build Android R16 / LineageOS 23.2 images** are
