@@ -38,6 +38,8 @@ def main() -> int:
 
     assert 'jobs="${JOBS:-6}"' in build_script
     assert '[[ "${jobs}" =~ ^[1-9][0-9]*$ ]]' in build_script
+    assert 'if [[ "${arm64_build_variant}" == user ]]; then' in build_script
+    assert "imx8mm_build_variant" not in build_script
     assert "Target cache before build:" in build_script
     profile_corpus = build_script + (REPO_ROOT / "scripts/write-build-info.py").read_text(
         encoding="utf-8"
