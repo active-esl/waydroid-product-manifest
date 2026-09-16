@@ -1,5 +1,5 @@
 name: Build Android R16 / LineageOS 23.2 images
-run-name: Android R16 / LineageOS 23.2 - ${{ inputs.build_scope }} (${{ inputs.arm64_variant }})
+run-name: Android R16 / LineageOS 23.2 - ${{ inputs.build_scope == 'arm64_2gb' && 'Jaguar Screen i.MX8MM 2 GB' || inputs.build_scope == 'arm64_standard' && 'i.MX8MM standard vendor candidate' || inputs.build_scope == 'x86_64' && 'Framework x86_64' || inputs.build_scope == 'x86_64_2gb' && 'Framework x86_64 2 GB' || 'multiple targets (Framework + i.MX8MM)' }} (${{ inputs.arm64_variant }})
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
           - userdebug
           - user
       build_scope:
-        description: Build both images, or rebuild only one target
+        description: Build all targets or select a profile; ARM64 vendor images target i.MX8MM
         required: true
         default: all
         type: choice
@@ -35,7 +35,7 @@ concurrency:
 
 jobs:
   build:
-    name: Android R16 / LineageOS 23.2 - ${{ inputs.build_scope }}
+    name: Android R16 / LineageOS 23.2 - ${{ inputs.build_scope == 'arm64_2gb' && 'Jaguar Screen i.MX8MM 2 GB' || inputs.build_scope == 'arm64_standard' && 'i.MX8MM standard vendor candidate' || inputs.build_scope == 'x86_64' && 'Framework x86_64' || inputs.build_scope == 'x86_64_2gb' && 'Framework x86_64 2 GB' || 'multiple targets (Framework + i.MX8MM)' }}
     runs-on: [self-hosted, esl-proxmox]
     # A first build in a new target-specific OUT_DIR has no compiled-object
     # cache. Leave enough headroom for the cold build while subsequent runs
@@ -91,7 +91,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()
         with:
-          name: aesl-android-r16-lineage-23.2-${{ github.run_id }}-${{ github.run_attempt }}
+          name: aesl-android-r16-${{ inputs.build_scope == 'arm64_2gb' && 'imx8mm-jaguar-screen-2gb' || inputs.build_scope == 'arm64_standard' && 'imx8mm-standard-candidate' || inputs.build_scope == 'x86_64' && 'framework-x86_64' || inputs.build_scope == 'x86_64_2gb' && 'framework-x86_64-2gb' || 'multiple-targets-framework-imx8mm' }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: 30

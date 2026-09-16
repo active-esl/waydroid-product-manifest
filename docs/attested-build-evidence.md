@@ -44,7 +44,7 @@ The attestation step is blocking. If it fails, the job fails; the subsequent
 `if: always()` upload may preserve diagnostics but must never turn that failure
 into a successful verdict.
 
-After downloading a future artifact, verify its files and provenance:
+After downloading the replacement artifact, verify its files and provenance:
 
 ```sh
 sha256sum --check SHA256SUMS
@@ -62,7 +62,7 @@ the reviewed workflow on `main`.
 | Product lane | Current useful evidence | Missing before CRA process intake |
 | --- | --- | --- |
 | Jaguar Screen R13 standard | Image run 34838947265 and working target 2887 board evidence | Rebuild release candidate with R13 provenance parity; binary register; vulnerability/VEX review; production signing and OTA/rollback pack |
-| Jaguar Screen R16 2 GB | Checksum-proven `userdebug` run 34856380503 | Successful paired host and HIL integration first; then attested `user` rebuild and complete security evidence |
+| Jaguar Screen R16 2 GB | Old run 34856380503 is rejected: its `system.img` is truncated. Prior-pin `userdebug` [run 35076252596](https://github.com/active-esl/waydroid-product-manifest/actions/runs/35076252596) passed checksums and both image attestations were verified | Rebuild the current `93b91e5` device pin, verify and retain its evidence, publish the immutable pair, complete paired host and HIL integration; then rebuild `user` and complete security evidence |
 | FRDM i.MX95 R16 | Foundries development host target 2936 and partial Android userspace evidence | Board-specific i.MX95 Android vendor product; Android attestation; exact host export; binary/licence review; full HIL acceptance |
 | R13 2 GB | Product definition only | Published workflow lane, full build and all evidence gates |
 | R16 standard | Product definition and workflow scope | Full build tied to a named product need, then all evidence gates |
@@ -71,10 +71,20 @@ Historical successful runs are not retroactively described as attested. They
 remain useful integration evidence. The attestation workflow applies to new
 runs after its introduction.
 
+For prior-pin run 35076252596, GitHub artifact
+`aesl-android-r16-lineage-23.2-35076252596-1` (artifact ID `10438937624`)
+contains `SHA256SUMS` and `provenance.sigstore.json`. GitHub reports the
+archive digest as
+`sha256:be383e02f2ae6c502381796254c9195f51593ec708f5c6ca5efb18515521c6af`.
+Its current retention ends on 2026-09-17 at 08:53 UTC; this digest identifies
+the archive but does not extend its retention. The prior-pin system and vendor
+subjects were verified against the repository while the artifact was available.
+
 ## Remaining implementation order
 
-1. Run the next required R16 build through the attesting workflow and verify
-   one downloaded subject end to end.
+1. Rebuild the current R16 source lock, verify its checksums and attested
+   subjects, and retain the evidence beyond the workflow's convenience
+   retention period. Run 35076252596 already passed this gate for the prior pin.
 2. Measure each generated SPDX JSON file. GitHub's SBOM predicate input is
    limited to 16 MB; add SPDX-specific attestations only after every selected
    lane is proven to fit or a reviewed smaller delivered-artifact SBOM is

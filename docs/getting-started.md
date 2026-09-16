@@ -47,6 +47,16 @@ Choose two inputs:
 | `arm64_variant=userdebug` | Integration and diagnosis; the default |
 | `arm64_variant=user` | Production-gated ARM64 build; still requires release and board acceptance |
 
+The Actions run, job and uploaded artifact identify the selected target. For
+`arm64_2gb` they say **Jaguar Screen i.MX8MM 2 GB**; `arm64_standard` says
+**i.MX8MM standard vendor candidate**. `all` is labelled as multiple targets,
+and the x86_64 scopes are labelled Framework. The existing artifact directories
+(`arm64_2gb`, `arm64_standard`, `x86_64` and `x86_64_2gb`) remain stable for
+consumers. The uploaded Actions artifact name changed from
+`aesl-android-r16-lineage-23.2-<run>-<attempt>` to
+`aesl-android-r16-<target>-<run>-<attempt>`; consumers that select artifacts by
+name must use the new target slug.
+
 The workflow always builds from
 [`locks/lineage-23.2-lock.xml`](../locks/lineage-23.2-lock.xml). Do not build a
 release directly from the mutable bootstrap files under
