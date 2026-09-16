@@ -33,14 +33,33 @@ def main() -> int:
     for line in expected_workflow_lines:
         assert workflow.count(line) == 1, f"missing or duplicate workflow policy: {line}"
 
-    release_identity = (
-        "name: Build Android R16 / LineageOS 23.2 images",
-        "run-name: Android R16 / LineageOS 23.2 - ${{ inputs.build_scope }}",
-        "name: Android R16 / LineageOS 23.2 - ${{ inputs.build_scope }}",
-        "name: aesl-android-r16-lineage-23.2-${{ github.run_id }}",
+    assert "name: Build Android R16 / LineageOS 23.2 images" in workflow
+    run_name = next(line for line in workflow.splitlines() if line.startswith("run-name: "))
+    job_name = next(
+        line for line in workflow.splitlines()
+        if line.startswith("    name: Android R16 / LineageOS 23.2 - ")
     )
-    for label in release_identity:
-        assert label in workflow, f"missing Android R16 CI identity: {label}"
+    artifact_name = next(
+        line for line in workflow.splitlines()
+        if line.startswith("          name: aesl-android-r16-")
+    )
+    for label in (run_name, job_name):
+        for target_name in (
+            "Jaguar Screen i.MX8MM 2 GB",
+            "i.MX8MM standard vendor candidate",
+            "Framework x86_64",
+            "Framework x86_64 2 GB",
+            "multiple targets (Framework + i.MX8MM)",
+        ):
+            assert target_name in label, f"missing Android R16 target identity: {target_name}"
+    for target_slug in (
+        "imx8mm-jaguar-screen-2gb",
+        "imx8mm-standard-candidate",
+        "framework-x86_64",
+        "framework-x86_64-2gb",
+        "multiple-targets-framework-imx8mm",
+    ):
+        assert target_slug in artifact_name, f"missing artifact target identity: {target_slug}"
 
     assert 'jobs="${JOBS:-6}"' in build_script
     assert '[[ "${jobs}" =~ ^[1-9][0-9]*$ ]]' in build_script
