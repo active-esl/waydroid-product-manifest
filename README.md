@@ -189,12 +189,16 @@ ABI is proven. A `vendor.img` remains SoC-specific.
 | R16 / LineageOS 23.2 `standard` | **NOT RUN** | No retained qualifying artifact |
 | R16 / LineageOS 23.2 `2gb` `userdebug` | **BUILT** — replacement [run 35076252596](https://github.com/active-esl/waydroid-product-manifest/actions/runs/35076252596) on the feature branch | The validated `system.img` is a shared ARM64 candidate; its `vendor.img` is i.MX8MM/Etnaviv-specific. Old run 34856380503 is rejected because its `system.img` is truncated. |
 
+Run 35076252596 used the previous device pin `e9d3eda`. The current lock pins
+`93b91e5`, which adds the flattened-APEX fallback and requires a new image
+build before integration release.
+
 #### Jaguar Screen — i.MX8MM
 
 | Product lane | Android images | Foundries host | Staging | Board result |
 | --- | --- | --- | --- | --- |
 | R13 standard working baseline | Run 34838947265 **BUILT** | [Target 2887](https://app.foundries.io/factories/dynamic-devices/targets/2887) **BUILT** | **STAGED** and tested | **WORKING** — Android UI and Etnaviv acceleration at 1920×1200 |
-| R16 2 GB integration candidate | Replacement run 35076252596 **BUILT**; old run 34856380503 rejected | `platform-r16-jaguar-screen` target 2943 **BUILT** and staged as host baseline; successor needs Jaguar fixes | Replacement Android pair **NOT STAGED**; the old pair was rolled back | **BLOCKED** pending exact host/image pairing and physical screen acceptance |
+| R16 2 GB integration candidate | Prior-pin run 35076252596 **BUILT**; current `93b91e5` pin needs a new build; old run 34856380503 rejected | `platform-r16-jaguar-screen` target 2943 **BUILT** and staged as host baseline; successor needs Jaguar fixes | Replacement Android pair **NOT STAGED**; the old pair was rolled back | **BLOCKED** pending current-lock build, exact host/image pairing and physical screen acceptance |
 
 The R16 tuple is
 `imx8mm-jaguar-screen-r16-waydroid-2gb-userdebug`: machine

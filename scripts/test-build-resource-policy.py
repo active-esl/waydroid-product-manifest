@@ -70,7 +70,7 @@ def main() -> int:
         'validate_raw_android_image "${target_artifacts}/system.img"',
         'validate_raw_android_image "${target_artifacts}/vendor.img"',
         'e2fsck -fn "${image}"',
-        '"${erofs_fsck}" --extract "${image}"',
+        'image is Android sparse; raw ext4 is required',
         '[[ "${logical_size}" -eq "${required_size}" ]]',
     ):
         assert image_gate in build_script, f"missing Android image integrity gate: {image_gate}"

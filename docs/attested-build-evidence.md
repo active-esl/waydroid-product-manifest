@@ -62,7 +62,7 @@ the reviewed workflow on `main`.
 | Product lane | Current useful evidence | Missing before CRA process intake |
 | --- | --- | --- |
 | Jaguar Screen R13 standard | Image run 34838947265 and working target 2887 board evidence | Rebuild release candidate with R13 provenance parity; binary register; vulnerability/VEX review; production signing and OTA/rollback pack |
-| Jaguar Screen R16 2 GB | Old run 34856380503 is rejected: its `system.img` is truncated. Replacement `userdebug` [run 35076252596](https://github.com/active-esl/waydroid-product-manifest/actions/runs/35076252596) succeeded on a feature-branch source lock with checksum and attestation outputs | Independently verify and retain the replacement evidence, publish the immutable pair, complete paired host and HIL integration; then rebuild `user` and complete security evidence |
+| Jaguar Screen R16 2 GB | Old run 34856380503 is rejected: its `system.img` is truncated. Prior-pin `userdebug` [run 35076252596](https://github.com/active-esl/waydroid-product-manifest/actions/runs/35076252596) passed checksums and both image attestations were verified | Rebuild the current `93b91e5` device pin, verify and retain its evidence, publish the immutable pair, complete paired host and HIL integration; then rebuild `user` and complete security evidence |
 | FRDM i.MX95 R16 | Foundries development host target 2936 and partial Android userspace evidence | Board-specific i.MX95 Android vendor product; Android attestation; exact host export; binary/licence review; full HIL acceptance |
 | R13 2 GB | Product definition only | Published workflow lane, full build and all evidence gates |
 | R16 standard | Product definition and workflow scope | Full build tied to a named product need, then all evidence gates |
@@ -73,9 +73,9 @@ runs after its introduction.
 
 ## Remaining implementation order
 
-1. Download and verify the R16 replacement artifact from run 35076252596,
-   including one attested subject end to end; retain the evidence beyond the
-   workflow's convenience retention period.
+1. Rebuild the current R16 source lock, verify its checksums and attested
+   subjects, and retain the evidence beyond the workflow's convenience
+   retention period. Run 35076252596 already passed this gate for the prior pin.
 2. Measure each generated SPDX JSON file. GitHub's SBOM predicate input is
    limited to 16 MB; add SPDX-specific attestations only after every selected
    lane is proven to fit or a reviewed smaller delivered-artifact SBOM is

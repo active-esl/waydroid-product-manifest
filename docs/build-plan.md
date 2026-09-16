@@ -72,9 +72,11 @@ passes the same screen, Etnaviv and UI checks.
 Run 34856380503 is failed integration evidence: its `system.img` is truncated
 and must not be staged again. The replacement `userdebug` pair from
 [run 35076252596](https://github.com/active-esl/waydroid-product-manifest/actions/runs/35076252596)
-passed the image-integrity gate on the `fix/r16-image-integrity` branch. Verify
-its retained checksums and provenance, publish and pin the immutable Android
-pair, then build a successor to Foundries target 2943 with the Jaguar host
+passed the image-integrity gate on the `fix/r16-image-integrity` branch and its
+retained checksums and both image attestations have been verified. That run
+predates the new `93b91e5` device pin, so rebuild the current lock, verify its
+evidence, then publish and pin the immutable Android pair. Build a successor
+to Foundries target 2943 with the Jaguar host
 fixes. Stage that exact pair on the Jaguar Screen and perform the screen
 acceptance test. Build the Android `user` variant only after `userdebug`
 integration passes.

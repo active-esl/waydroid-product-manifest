@@ -53,10 +53,9 @@ esac
 die() { echo "$*" >&2; exit 1; }
 
 validate_raw_android_image() {
-    local block_count block_size erofs_fsck filesystem image logical_size partition required_size target_out_dir
+    local block_count block_size filesystem image logical_size partition required_size
     image="$1"
     partition="$2"
-    target_out_dir="$3"
     filesystem="$(blkid -p -s TYPE -o value "${image}" 2>/dev/null || true)"
     case "${filesystem}" in
         ext4)
@@ -73,14 +72,11 @@ validate_raw_android_image() {
             e2fsck -fn "${image}" \
                 || die "${partition} image failed read-only ext4 integrity validation: ${image}"
             ;;
-        erofs)
-            erofs_fsck="${target_out_dir}/host/linux-x86/bin/fsck.erofs"
-            [[ -x "${erofs_fsck}" ]] \
-                || die "${partition} EROFS checker is missing from the exact Android build: ${erofs_fsck}"
-            "${erofs_fsck}" --extract "${image}" \
-                || die "${partition} image failed read-only EROFS integrity validation: ${image}"
+        *)
+            [[ "$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).open("rb").read(4).hex())' "${image}")" != 3aff26ed ]] \
+                || die "${partition} image is Android sparse; raw ext4 is required: ${image}"
+            die "${partition} image has unsupported filesystem: ${image} (${filesystem:-unknown})"
             ;;
-        *) die "${partition} image has unsupported filesystem: ${image} (${filesystem:-unknown})" ;;
     esac
 }
 
@@ -460,8 +456,8 @@ for target in "${targets[@]}"; do
     mkdir -p "${target_artifacts}"
     install -m 0644 "${OUT}/system.img" "${target_artifacts}/system.img"
     install -m 0644 "${OUT}/vendor.img" "${target_artifacts}/vendor.img"
-    validate_raw_android_image "${target_artifacts}/system.img" "${target} system" "${target_out_dir}"
-    validate_raw_android_image "${target_artifacts}/vendor.img" "${target} vendor" "${target_out_dir}"
+    validate_raw_android_image "${target_artifacts}/system.img" "${target} system"
+    validate_raw_android_image "${target_artifacts}/vendor.img" "${target} vendor"
     sbom_dir="${target_out_dir}/soong/sbom/${TARGET_PRODUCT:?TARGET_PRODUCT is not set}"
     [[ -s "${sbom_dir}/sbom.spdx.json" ]] \
         || die "Android SPDX JSON SBOM was not generated for ${target}"

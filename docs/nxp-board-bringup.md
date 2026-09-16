@@ -53,10 +53,12 @@ security attributes as a repair. Replace the shared artifact and repin its
 checksum before testing any i.MX8 or i.MX9 board.
 
 The R16 source lock now pins device commit
-[`e9d3eda`](https://github.com/active-esl/android_device_waydroid_waydroid/commit/e9d3eda4e658e37c9c116ae3dccb55e7728c18a5).
-Relative to `d00473a`, it changes only
+[`93b91e5`](https://github.com/active-esl/android_device_waydroid_waydroid/commit/93b91e54fd359fe95824d6590dab5a31a88e7b27).
+Its predecessor `e9d3eda` changed
 `BOARD_SYSTEMIMAGE_FILE_SYSTEM_TYPE` from `erofs` to `ext4` in `BoardConfig.mk`;
-the vendor image was already ext4. Replacement
+the vendor image was already ext4. The new commit restores the explicit
+`TARGET_FLATTEN_APEX` fallback alongside the override and adds static product
+checks. The prior-pin replacement
 [run 35076252596](https://github.com/active-esl/waydroid-product-manifest/actions/runs/35076252596)
 built the locked `arm64_2gb` `userdebug` pair at manifest commit `f520a33`.
 Its retained `SHA256SUMS` records `system.img` as
@@ -65,7 +67,8 @@ and `vendor.img` as
 `8d8c2004c717ea32db044ae8f3b3a8cf66d5f5182b386d59d4d3312e1d373465`.
 The installed copies on CT101 measure 2,006,986,752 and 88,363,008 bytes,
 respectively, exactly matching their ext4 block counts and 4,096-byte blocks.
-This is build evidence; the pair has not passed physical-board acceptance.
+This is build evidence for `e9d3eda`; the new `93b91e5` lock needs a fresh
+image build before release and has not passed physical-board acceptance.
 
 ## Jaguar Screen evidence log
 
@@ -119,8 +122,9 @@ Follow the canonical [build and promotion plan](build-plan.md). Run 34856380503
 is preserved as failed integration evidence; its truncated `system.img` must
 not be reused.
 
-1. Verify and retain the complete replacement artifact from run 35076252596,
-   including `SHA256SUMS`, provenance, SBOM and both validated images.
+1. Build the `93b91e5` lock, then verify and retain its complete artifact,
+   including `SHA256SUMS`, provenance, SBOM and both validated images. The
+   prior-pin run 35076252596 remains integrity and attestation evidence.
 2. Publish a new immutable Android integration release, update the partner
    checksums, and build a successor to Foundries target 2943 containing the
    provisioning and Jaguar PulseAudio fixes.
