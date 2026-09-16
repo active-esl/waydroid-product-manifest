@@ -71,6 +71,15 @@ Historical successful runs are not retroactively described as attested. They
 remain useful integration evidence. The attestation workflow applies to new
 runs after its introduction.
 
+For prior-pin run 35076252596, GitHub artifact
+`aesl-android-r16-lineage-23.2-35076252596-1` (artifact ID `10438937624`)
+contains `SHA256SUMS` and `provenance.sigstore.json`. GitHub reports the
+archive digest as
+`sha256:be383e02f2ae6c502381796254c9195f51593ec708f5c6ca5efb18515521c6af`.
+Its current retention ends on 2026-09-17 at 08:53 UTC; this digest identifies
+the archive but does not extend its retention. The prior-pin system and vendor
+subjects were verified against the repository while the artifact was available.
+
 ## Remaining implementation order
 
 1. Rebuild the current R16 source lock, verify its checksums and attested

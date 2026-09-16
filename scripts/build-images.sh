@@ -75,6 +75,16 @@ validate_raw_android_image() {
         *)
             [[ "$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).open("rb").read(4).hex())' "${image}")" != 3aff26ed ]] \
                 || die "${partition} image is Android sparse; raw ext4 is required: ${image}"
+            # blkid may report "unknown" for ext4 with appended bytes. Check
+            # its superblock before falling back to the generic diagnostic.
+            block_count="$(LC_ALL=C dumpe2fs -h "${image}" 2>/dev/null | awk -F: '/^Block count:/ {gsub(/ /, "", $2); print $2}' || true)"
+            block_size="$(LC_ALL=C dumpe2fs -h "${image}" 2>/dev/null | awk -F: '/^Block size:/ {gsub(/ /, "", $2); print $2}' || true)"
+            if [[ "${block_count}" =~ ^[0-9]+$ && "${block_size}" =~ ^[0-9]+$ ]]; then
+                logical_size="$(stat -c '%s' "${image}")"
+                required_size="$((block_count * block_size))"
+                [[ "${logical_size}" -le "${required_size}" ]] \
+                    || die "${partition} image has trailing data: file=${logical_size} bytes ext4=${required_size} bytes"
+            fi
             die "${partition} image has unsupported filesystem: ${image} (${filesystem:-unknown})"
             ;;
     esac
@@ -207,7 +217,7 @@ done
 # The locked R16 ext4 images passed e2fsck 1.47.0 on CT101. Older host
 # e2fsprogs may not understand features emitted by Android's image tools.
 e2fsck_version="$(e2fsck -V 2>&1 | awk 'NR == 1 {print $2}')"
-[[ "${e2fsck_version}" =~ ^([0-9]+)\.([0-9]+)(\.[0-9]+)?$ ]] \
+[[ "${e2fsck_version}" =~ ^([0-9]+)\.([0-9]+)(\.[0-9]+)? ]] \
     || die "cannot determine host e2fsck version: ${e2fsck_version:-unknown}"
 (( BASH_REMATCH[1] > 1 || (BASH_REMATCH[1] == 1 && BASH_REMATCH[2] >= 47) )) \
     || die "host e2fsck ${e2fsck_version} is too old; R16 images require e2fsprogs 1.47 or newer"
