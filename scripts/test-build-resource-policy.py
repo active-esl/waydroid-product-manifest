@@ -80,6 +80,10 @@ def main() -> int:
     for profile_contract in (
         "arm64_standard)",
         "arm64_2gb|imx8mm)",
+        "imx95_frdm)",
+        "lineage_waydroid_aesl_imx95_arm64_only-bp4a-",
+        'target_artifacts="${artifact_dir}/imx95_frdm"',
+        "ANDROID_IMX95_OUT_DIR",
         "lineage_waydroid_arm64_only-bp4a-",
         "lineage_waydroid_aesl_2gb_arm64_only-bp4a-",
         "ANDROID_ARM64_STANDARD_OUT_DIR",

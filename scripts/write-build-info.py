@@ -29,6 +29,9 @@ document = {
         {
             "target": target,
             "memory_profile": "2gb" if "aesl_2gb" in target else "standard",
+            "board_profile": "imx95_frdm" if "aesl_imx95" in target else (
+                "imx8mm" if "arm64" in target else "framework"
+            ),
         }
         for target in args.targets
         if "arm64" in target

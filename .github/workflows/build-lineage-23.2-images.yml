@@ -13,7 +13,7 @@ on:
           - userdebug
           - user
       build_scope:
-        description: Build all targets or select a profile; ARM64 vendor images target i.MX8MM
+        description: Build all targets or select one target; i.MX95 requires its reviewed vendor inputs
         required: true
         default: all
         type: choice
@@ -21,6 +21,7 @@ on:
           - all
           - arm64_standard
           - arm64_2gb
+          - imx95_frdm
           - x86_64
           - x86_64_2gb
 
@@ -51,7 +52,7 @@ jobs:
         run: scripts/install-repo-tool.sh
       - name: Preflight CI storage
         run: |
-          install -d /yocto/android-16-source/out-x86_64 /yocto/android-16-source/out-x86_64-2gb /yocto/android-16-source/out-arm64-standard /yocto/android-16-source/out-arm64-2gb /yocto/android-16-artifacts /yocto/android-16-manifests
+          install -d /yocto/android-16-source/out-x86_64 /yocto/android-16-source/out-x86_64-2gb /yocto/android-16-source/out-arm64-standard /yocto/android-16-source/out-arm64-2gb /yocto/android-16-source/out-imx95-frdm /yocto/android-16-artifacts /yocto/android-16-manifests
           available_kib=$(df --output=avail /yocto | tail -1 | tr -d ' ')
           minimum_kib=$((300 * 1024 * 1024))
           if [ "${available_kib}" -lt "${minimum_kib}" ]; then
@@ -67,6 +68,7 @@ jobs:
           ANDROID_X86_64_2GB_OUT_DIR: /yocto/android-16-source/out-x86_64-2gb
           ANDROID_ARM64_STANDARD_OUT_DIR: /yocto/android-16-source/out-arm64-standard
           ANDROID_ARM64_2GB_OUT_DIR: /yocto/android-16-source/out-arm64-2gb
+          ANDROID_IMX95_OUT_DIR: /yocto/android-16-source/out-imx95-frdm
           ANDROID_MANIFEST_CACHE_DIR: /yocto/android-16-manifests
           OUTPUT_DIR: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
           # CT101 has a six-CPU cgroup quota. Do not create excess runnable and
