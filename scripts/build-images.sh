@@ -60,14 +60,16 @@ validate_raw_android_image() {
     filesystem="$(blkid -p -s TYPE -o value "${image}" 2>/dev/null || true)"
     case "${filesystem}" in
         ext4)
-            block_count="$(dumpe2fs -h "${image}" 2>/dev/null | awk -F: '/^Block count:/ {gsub(/ /, "", $2); print $2}')"
-            block_size="$(dumpe2fs -h "${image}" 2>/dev/null | awk -F: '/^Block size:/ {gsub(/ /, "", $2); print $2}')"
+            block_count="$(LC_ALL=C dumpe2fs -h "${image}" 2>/dev/null | awk -F: '/^Block count:/ {gsub(/ /, "", $2); print $2}' || true)"
+            block_size="$(LC_ALL=C dumpe2fs -h "${image}" 2>/dev/null | awk -F: '/^Block size:/ {gsub(/ /, "", $2); print $2}' || true)"
             [[ "${block_count}" =~ ^[0-9]+$ && "${block_size}" =~ ^[0-9]+$ ]] \
                 || die "could not read ${partition} ext4 geometry: ${image}"
             logical_size="$(stat -c '%s' "${image}")"
             required_size="$((block_count * block_size))"
             [[ "${logical_size}" -ge "${required_size}" ]] \
                 || die "${partition} image is truncated: file=${logical_size} bytes ext4=${required_size} bytes"
+            [[ "${logical_size}" -eq "${required_size}" ]] \
+                || die "${partition} image has trailing data: file=${logical_size} bytes ext4=${required_size} bytes"
             e2fsck -fn "${image}" \
                 || die "${partition} image failed read-only ext4 integrity validation: ${image}"
             ;;
@@ -203,7 +205,7 @@ sync_locked_sources() {
     done
 }
 
-for command in repo git python3 sha256sum timeout ps; do
+for command in repo git python3 sha256sum timeout ps blkid dumpe2fs e2fsck; do
     command -v "${command}" >/dev/null || die "required command missing: ${command}"
 done
 [[ "${android_dir}" == /yocto/* ]] || die "ANDROID_WORKSPACE must be under /yocto"

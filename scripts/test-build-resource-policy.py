@@ -66,6 +66,14 @@ def main() -> int:
     assert 'if [[ "${arm64_build_variant}" == user ]]; then' in build_script
     assert "imx8mm_build_variant" not in build_script
     assert "Target cache before build:" in build_script
+    for image_gate in (
+        'validate_raw_android_image "${target_artifacts}/system.img"',
+        'validate_raw_android_image "${target_artifacts}/vendor.img"',
+        'e2fsck -fn "${image}"',
+        '"${erofs_fsck}" --extract "${image}"',
+        '[[ "${logical_size}" -eq "${required_size}" ]]',
+    ):
+        assert image_gate in build_script, f"missing Android image integrity gate: {image_gate}"
     profile_corpus = build_script + (REPO_ROOT / "scripts/write-build-info.py").read_text(
         encoding="utf-8"
     )

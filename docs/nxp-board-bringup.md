@@ -52,6 +52,13 @@ superblock declares 1,981,640,704 bytes while the released file contains only
 security attributes as a repair. Replace the shared artifact and repin its
 checksum before testing any i.MX8 or i.MX9 board.
 
+The R16 source lock now pins device commit
+[`e9d3eda`](https://github.com/active-esl/android_device_waydroid_waydroid/commit/e9d3eda4e658e37c9c116ae3dccb55e7728c18a5).
+Relative to `d00473a`, it changes only
+`BOARD_SYSTEMIMAGE_FILE_SYSTEM_TYPE` from `erofs` to `ext4` in `BoardConfig.mk`;
+the vendor image was already ext4. The replacement build's installed system
+and vendor images both match their declared ext4 geometry exactly.
+
 ## Jaguar Screen evidence log
 
 Evidence reviewed: 2026-09-15.
