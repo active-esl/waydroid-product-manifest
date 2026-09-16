@@ -69,10 +69,10 @@
       "vendor_source": "LineageOS/Waydroid lock",
       "host_bsp_contract": "Foundries LmP; exact release and kernel ABI pending release baseline",
       "evidence_state": {
-        "android_image": "built: R16 2 GB userdebug run 34856380503",
-        "host_build": "blocked: no successful platform-r16-jaguar-screen target",
-        "staging": "run 34856380503 pair checksum-staged on target 2892 then rolled back",
-        "acceptance": "blocked pending corrected R16 host build and physical test"
+        "android_image": "built: replacement R16 2 GB userdebug run 35076252596 passed image-integrity gate; old run 34856380503 rejected due truncated system.img",
+        "host_build": "built: platform-r16-jaguar-screen target 2943 staged as host baseline; successor needs Jaguar fixes",
+        "staging": "replacement Android pair not staged; rejected run 34856380503 was rolled back",
+        "acceptance": "blocked pending immutable Android pair, corrected R16 host and physical test"
       }
     },
     {

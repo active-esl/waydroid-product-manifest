@@ -24,7 +24,7 @@ both; do not infer compatibility from the i.MX8 or i.MX9 family name.
 
 | Machine | Working build | Staged candidate | Current boundary |
 | --- | --- | --- | --- |
-| Jaguar Screen i.MX8MM | R13 standard: Android run 34838947265 with Foundries target 2887 | Foundries target 2943 is installed from isolated tag `r16-jaguar-screen` | The released R16 `system.img` is truncated and must be replaced before runtime acceptance |
+| Jaguar Screen i.MX8MM | R13 standard: Android run 34838947265 with Foundries target 2887 | Foundries target 2943 is installed from isolated tag `r16-jaguar-screen` | The old R16 `system.img` is truncated; replacement run 35076252596 is built but not staged |
 | FRDM i.MX95 | Foundries development host target 2936 | The R16 pair from run 34856380503 reached partial startup evidence on FRDM | Replace the corrupt shared `system.img`; the i.MX8MM `vendor.img` is also not an FRDM product image, so build the i.MX95 Mali/Hantro vendor class |
 
 “Working build” in this table identifies the highest component gate that has
@@ -56,8 +56,16 @@ The R16 source lock now pins device commit
 [`e9d3eda`](https://github.com/active-esl/android_device_waydroid_waydroid/commit/e9d3eda4e658e37c9c116ae3dccb55e7728c18a5).
 Relative to `d00473a`, it changes only
 `BOARD_SYSTEMIMAGE_FILE_SYSTEM_TYPE` from `erofs` to `ext4` in `BoardConfig.mk`;
-the vendor image was already ext4. The replacement build's installed system
-and vendor images both match their declared ext4 geometry exactly.
+the vendor image was already ext4. Replacement
+[run 35076252596](https://github.com/active-esl/waydroid-product-manifest/actions/runs/35076252596)
+built the locked `arm64_2gb` `userdebug` pair at manifest commit `f520a33`.
+Its retained `SHA256SUMS` records `system.img` as
+`b2bca3abd5993ad88cb032aa99d0eff2246b2ad8754df1ed6c2bae86e2a68b17`
+and `vendor.img` as
+`8d8c2004c717ea32db044ae8f3b3a8cf66d5f5182b386d59d4d3312e1d373465`.
+The installed copies on CT101 measure 2,006,986,752 and 88,363,008 bytes,
+respectively, exactly matching their ext4 block counts and 4,096-byte blocks.
+This is build evidence; the pair has not passed physical-board acceptance.
 
 ## Jaguar Screen evidence log
 
@@ -111,9 +119,8 @@ Follow the canonical [build and promotion plan](build-plan.md). Run 34856380503
 is preserved as failed integration evidence; its truncated `system.img` must
 not be reused.
 
-1. Rebuild the shared R16 2 GB `system.img` with the raw-ext4 geometry and
-   read-only filesystem integrity gates enabled; build the i.MX8MM vendor image
-   in the same controlled tuple.
+1. Verify and retain the complete replacement artifact from run 35076252596,
+   including `SHA256SUMS`, provenance, SBOM and both validated images.
 2. Publish a new immutable Android integration release, update the partner
    checksums, and build a successor to Foundries target 2943 containing the
    provisioning and Jaguar PulseAudio fixes.

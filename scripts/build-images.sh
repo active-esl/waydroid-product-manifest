@@ -208,6 +208,13 @@ sync_locked_sources() {
 for command in repo git python3 sha256sum timeout ps blkid dumpe2fs e2fsck; do
     command -v "${command}" >/dev/null || die "required command missing: ${command}"
 done
+# The locked R16 ext4 images passed e2fsck 1.47.0 on CT101. Older host
+# e2fsprogs may not understand features emitted by Android's image tools.
+e2fsck_version="$(e2fsck -V 2>&1 | awk 'NR == 1 {print $2}')"
+[[ "${e2fsck_version}" =~ ^([0-9]+)\.([0-9]+)(\.[0-9]+)?$ ]] \
+    || die "cannot determine host e2fsck version: ${e2fsck_version:-unknown}"
+(( BASH_REMATCH[1] > 1 || (BASH_REMATCH[1] == 1 && BASH_REMATCH[2] >= 47) )) \
+    || die "host e2fsck ${e2fsck_version} is too old; R16 images require e2fsprogs 1.47 or newer"
 [[ "${android_dir}" == /yocto/* ]] || die "ANDROID_WORKSPACE must be under /yocto"
 [[ "${x86_64_out_dir}" == "${android_dir}"/* ]] \
     || die "ANDROID_X86_64_OUT_DIR must be inside ANDROID_WORKSPACE"
