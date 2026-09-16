@@ -24,13 +24,14 @@ both; do not infer compatibility from the i.MX8 or i.MX9 family name.
 
 | Machine | Working build | Staged candidate | Current boundary |
 | --- | --- | --- | --- |
-| Jaguar Screen i.MX8MM | R13 standard: Android run 34838947265 with Foundries target 2887 | Foundries target 2943 is installed from isolated tag `r16-jaguar-screen` | The old R16 `system.img` is truncated; replacement run 35076252596 is built but not staged |
+| Jaguar Screen i.MX8MM | R13 standard: Android run 34838947265 with Foundries target 2887 | Foundries target 2943 plus Android R16 run 35084191413 are installed; display handover is bench-hotpatched | Warm reboot reaches LineageOS automatically after the Active-Edge splash; baked-host OTA, cold boot, GPU/media and lifecycle gates remain open |
 | FRDM i.MX95 | Foundries development host target 2936 | The R16 pair from run 34856380503 reached partial startup evidence on FRDM | Replace the corrupt shared `system.img`; the i.MX8MM `vendor.img` is also not an FRDM product image, so build the i.MX95 Mali/Hantro vendor class |
 
 “Working build” in this table identifies the highest component gate that has
-passed. Only Jaguar R13 has passed the complete Android UI and acceleration
-board gate. FRDM target 2936 is a working host-build baseline, not a completed
-Android product.
+passed. Jaguar R16 has passed a warm-reboot boot/UI display gate on the
+hotpatched board, but not the complete acceleration and OTA gates. Jaguar R13
+retains the earlier complete Android UI/acceleration baseline. FRDM target
+2936 is a working host-build baseline, not a completed Android product.
 
 ## Jaguar Screen current state
 
@@ -44,6 +45,24 @@ firmware `2026090703`; both U-Boot upgrade flags are clear. Two defects were
 found during staging: the Jaguar session must point Waydroid at the system
 PulseAudio socket `/run/pulse`, and immutable release provisioning must not
 accept an arbitrary older image pair before comparing the release marker.
+
+On 2026-09-16 the board selected the R16 pair from
+[run 35084191413](https://github.com/active-esl/waydroid-product-manifest/actions/runs/35084191413).
+The SHA-256 values are `d03e25327e7cf588b70488b7aecf6d9b51403f50f3d00dd30f8b817371d213d4`
+for `system.img` and `8d8c2004c717ea32db044ae8f3b3a8cf66d5f5182b386d59d4d3312e1d373465`
+for `vendor.img`. `/var` had first filled, causing `ENOSPC` and an Android
+`NetworkStatsService` crash loop. Inactive R13/older R16 images and the old
+baseline backup were removed in development mode; they are no longer an
+on-board rollback set. The board had 5.0 GB free after reprovisioning.
+
+The proven warm-reboot presentation path is: keep Waydroid's session in the
+background so the Active-Edge splash remains visible; request full UI; wait
+for `sys.boot_completed=1`; restart `vendor.hwcomposer-2-1` once to present
+LineageOS. Alex observed the splash-to-Lineage transition without a manual
+restart. This is a **bench-hotpatch pass**, not proof that target 2943 contains
+the fix. See the partner-layer
+[`Jaguar Screen R16 boot/display test`](https://github.com/active-esl/meta-partner-nxp-imx/blob/fix/r16-jaguar-screen-release/test-plan/jaguar-screen-r16-waydroid.md)
+for the reproducible check and remaining gates.
 
 The pinned R16 `system.img` from run 34856380503 is not deployable. Its ext4
 superblock declares 1,981,640,704 bytes while the released file contains only
@@ -67,12 +86,15 @@ and `vendor.img` as
 `8d8c2004c717ea32db044ae8f3b3a8cf66d5f5182b386d59d4d3312e1d373465`.
 The installed copies on CT101 measure 2,006,986,752 and 88,363,008 bytes,
 respectively, exactly matching their ext4 block counts and 4,096-byte blocks.
-This is build evidence for `e9d3eda`; the new `93b91e5` lock needs a fresh
-image build before release and has not passed physical-board acceptance.
+This is historical build evidence for `e9d3eda`, not the pair now on the
+board. The later run 35084191413 passed the bench boot/UI display check
+described above; its release evidence and the baked-host OTA gate are still
+required before promotion.
 
 ## Jaguar Screen evidence log
 
-Evidence reviewed: 2026-09-15.
+Evidence reviewed: 2026-09-16. Historical failures below remain recorded;
+they do not override the later 35084191413 bench result.
 
 The candidate is the explicit product tuple
 `imx8mm-jaguar-screen-r16-waydroid-2gb-userdebug`: machine
@@ -109,12 +131,11 @@ runtime did not produce a qualifying boot, so it is not release evidence. Do
 not repeat that transplant: build the complete host integration and retest the
 paired host and Android artifacts.
 
-The preserved R13 image link is restored, but the current target 2892 is not a
-qualified fallback. A bounded check after reboot showed Android release 13 and
-RUNNING container/session states, while `sys.boot_completed` stayed empty and
-`waydroid-jaguar-ui.service` failed waiting for `waydroidplatform`. Do not use
-that state to replace the earlier target 2887 R13 PASS evidence, and do not
-perform another runtime transplant while the complete host build is pending.
+The historical target 2892 R13 fallback was not qualified: a bounded check
+showed RUNNING container/session states but no `sys.boot_completed`, and the UI
+service failed waiting for `waydroidplatform`. This does not replace the
+earlier target 2887 R13 PASS evidence. As of 2026-09-16, the board retains
+only the selected R16 images; re-stage R13 if an R13 rollback test is needed.
 
 ## Next Jaguar Screen action
 
@@ -122,14 +143,15 @@ Follow the canonical [build and promotion plan](build-plan.md). Run 34856380503
 is preserved as failed integration evidence; its truncated `system.img` must
 not be reused.
 
-1. Build the `93b91e5` lock, then verify and retain its complete artifact,
-   including `SHA256SUMS`, provenance, SBOM and both validated images. The
-   prior-pin run 35076252596 remains integrity and attestation evidence.
-2. Publish a new immutable Android integration release, update the partner
-   checksums, and build a successor to Foundries target 2943 containing the
-   provisioning and Jaguar PulseAudio fixes.
-3. Stage only on the Jaguar Screen machine, retaining the working R13 rollback,
-   then prove Android boot, UI, Etnaviv/V4L2, memory and lifecycle behaviour.
+1. Retain and verify the complete run 35084191413 artifact evidence, including
+   `SHA256SUMS`, provenance, SBOM and the selected pair's release identity.
+2. Build the captured Jaguar Screen session/display handover fix into a
+   successor to Foundries target 2943. No new Foundries build was started by
+   the bench test.
+3. Apply that target only to the Jaguar Screen lane, remove bench overrides,
+   and repeat the splash-to-Lineage check through OTA. Then prove cold boot,
+   touch, Etnaviv/V4L2, memory and lifecycle separately. Re-stage R13 if an
+   on-board rollback test is required.
 4. Apply the shared-image gate to every i.MX8/i.MX9 target. Only after
    `userdebug` integration passes, build the Android `user` variant and repeat
    the release gates.

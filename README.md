@@ -168,7 +168,7 @@ defined separately in the [build and promotion plan](docs/build-plan.md):
 
 ### Build and board-test status
 
-Evidence reviewed: **2026-09-15**. The tables deliberately use different words
+Evidence reviewed: **2026-09-16**. The tables deliberately use different words
 for different gates:
 
 - **BUILT**: CI produced the expected component artifacts.
@@ -187,18 +187,18 @@ ABI is proven. A `vendor.img` remains SoC-specific.
 | R13 / LineageOS 20 `standard` | **BUILT** — [run 34838947265](https://github.com/active-esl/android_vendor_waydroid/actions/runs/34838947265) | Proven with the Jaguar Screen i.MX8MM vendor path |
 | R13 / LineageOS 20 `2gb` | **NOT RUN** | Workflow input is not yet promoted to `lineage-20` |
 | R16 / LineageOS 23.2 `standard` | **NOT RUN** | No retained qualifying artifact |
-| R16 / LineageOS 23.2 `2gb` `userdebug` | **BUILT** — replacement [run 35076252596](https://github.com/active-esl/waydroid-product-manifest/actions/runs/35076252596) on the feature branch | The validated `system.img` is a shared ARM64 candidate; its `vendor.img` is i.MX8MM/Etnaviv-specific. Old run 34856380503 is rejected because its `system.img` is truncated. |
+| R16 / LineageOS 23.2 `2gb` `userdebug` | **BUILT** — [run 35084191413](https://github.com/active-esl/waydroid-product-manifest/actions/runs/35084191413), installed on Jaguar Screen | `system.img` is the shared ARM64 candidate; `vendor.img` is i.MX8MM/Etnaviv-specific. Old run 34856380503 is rejected because its `system.img` is truncated. |
 
-Run 35076252596 used the previous device pin `e9d3eda`. The current lock pins
-`93b91e5`, which adds the flattened-APEX fallback and requires a new image
-build before integration release.
+Run 35076252596 used the previous device pin `e9d3eda`. The later R16 pair
+from run 35084191413 is the pair selected and SHA-256 verified on Jaguar
+Screen; its full release/attestation gate remains separate from this bench test.
 
 #### Jaguar Screen — i.MX8MM
 
 | Product lane | Android images | Foundries host | Staging | Board result |
 | --- | --- | --- | --- | --- |
 | R13 standard working baseline | Run 34838947265 **BUILT** | [Target 2887](https://app.foundries.io/factories/dynamic-devices/targets/2887) **BUILT** | **STAGED** and tested | **WORKING** — Android UI and Etnaviv acceleration at 1920×1200 |
-| R16 2 GB integration candidate | Prior-pin run 35076252596 **BUILT**; current `93b91e5` pin needs a new build; old run 34856380503 rejected | `platform-r16-jaguar-screen` target 2943 **BUILT** and staged as host baseline; successor needs Jaguar fixes | Replacement Android pair **NOT STAGED**; the old pair was rolled back | **BLOCKED** pending current-lock build, exact host/image pairing and physical screen acceptance |
+| R16 2 GB integration candidate | Run 35084191413 **BUILT** and selected; old run 34856380503 rejected | `platform-r16-jaguar-screen` target 2943 **BUILT** and staged as host baseline; display handover is bench-hotpatched | R16 pair **STAGED** on Jaguar Screen | **WORKING for warm-reboot boot/UI display on the bench**; cold boot, acceleration, media, OTA and baked-host gates remain open |
 
 The R16 tuple is
 `imx8mm-jaguar-screen-r16-waydroid-2gb-userdebug`: machine
@@ -216,9 +216,10 @@ tag. The detailed attempt, checksum and rollback record is in
 | R16 host integration | Rejected run 34856380503 was used for historical integration only; its `system.img` is truncated and `vendor.img` is for i.MX8MM | [Target 2936](https://app.foundries.io/factories/dynamic-devices/targets/2936) from `main-imx95-frdm-devel` **BUILT** | Historical host/image pair was **STAGED** on FRDM; do not reuse it | **BLOCKED after partial boot** — Android 16 userspace starts, but EGL fails on the DPU-only DRM node |
 | R16 complete FRDM product | Shared ARM64 `system.img` candidate exists; i.MX95 `vendor.img` **NOT BUILT** | Target 2936 is the usable development host baseline | **NOT STAGED** as a valid board-specific pair | **BLOCKED** pending the reviewed i.MX95 Mali/Hantro vendor image |
 
-In short: the Jaguar R13 tuple is the currently working screen build; the
-Jaguar R16 replacement Android pair has passed CI integrity validation but
-needs immutable publication, matching host fixes and board acceptance. The
+In short: Jaguar R13 retains its earlier complete screen/acceleration baseline.
+Jaguar R16 now reaches LineageOS automatically on the physical screen after a
+warm reboot with a board hotpatch, but the host fix still needs a Foundries
+build, OTA test and the remaining board acceptance gates. The
 FRDM R16 host is an integration baseline without a board-specific Android
 vendor image. Run 34856380503 remains historical failure evidence only.
 
