@@ -47,6 +47,7 @@ def main() -> int:
         for target_name in (
             "Jaguar Screen i.MX8MM 2 GB",
             "i.MX8MM standard vendor candidate",
+            "FRDM i.MX95 standard",
             "Framework x86_64",
             "Framework x86_64 2 GB",
             "multiple targets (Framework + i.MX8MM)",
@@ -55,11 +56,16 @@ def main() -> int:
     for target_slug in (
         "imx8mm-jaguar-screen-2gb",
         "imx8mm-standard-candidate",
+        "frdm-imx95-standard",
         "framework-x86_64",
         "framework-x86_64-2gb",
         "multiple-targets-framework-imx8mm",
     ):
         assert target_slug in artifact_name, f"missing artifact target identity: {target_slug}"
+    for label in (run_name, job_name, artifact_name):
+        assert "inputs.build_scope == 'imx95_frdm'" in label, (
+            "i.MX95 identity must be selected by its own build scope"
+        )
 
     assert 'jobs="${JOBS:-6}"' in build_script
     assert '[[ "${jobs}" =~ ^[1-9][0-9]*$ ]]' in build_script
