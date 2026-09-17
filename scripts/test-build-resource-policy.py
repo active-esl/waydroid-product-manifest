@@ -66,6 +66,10 @@ def main() -> int:
     assert 'if [[ "${arm64_build_variant}" == user ]]; then' in build_script
     assert "imx8mm_build_variant" not in build_script
     assert "Target cache before build:" in build_script
+    assert 'if [[ "${build_scope}" == imx95_frdm && -d "${artifact_dir}/imx95_frdm" ]]; then' in build_script
+    assert 'board_profile=imx8mm' in build_script
+    assert 'board_profile=imx95_frdm' in build_script
+    assert '"AESL_WAYDROID_BOARD_PROFILE = \\"${board_profile}\\""' in build_script
     for image_gate in (
         'validate_raw_android_image "${target_artifacts}/system.img"',
         'validate_raw_android_image "${target_artifacts}/vendor.img"',
