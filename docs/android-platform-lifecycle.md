@@ -80,7 +80,17 @@ source assembled; it does not change board support status.
 
 ## i.MX95 baseline decision
 
-The current integration candidate is NXP `android-16.0.0_2.0.0`, which exposes
+The OS for FRDM i.MX95 remains AESL's pinned **LineageOS 23.2 / Android R16**
+Waydroid build. NXP `android-16.0.0_2.0.0` is a candidate source of
+board-specific GPU/media/HAL components, **not** a replacement Android OS or
+manifest. Do not treat its proprietary tarball as a prerequisite for every
+LineageOS build: first establish which i.MX95 vendor stack the chosen host
+kernel and Waydroid container actually require, then gate only those inputs.
+The currently scaffolded i.MX95 product deliberately selects NXP Mali and
+fails closed without its matching components; that product choice can be
+revisited without changing the LineageOS core.
+
+The current hardware-vendor integration candidate is NXP `android-16.0.0_2.0.0`, which exposes
 both proprietary Mali/kbase and Mesa/Panthor configurations. The current LmP
 host uses the NXP Mali stack, so the first target is deliberately `nxp-mali`.
 Moving to Panthor may reduce proprietary coupling, but it requires a coordinated
