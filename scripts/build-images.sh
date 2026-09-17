@@ -515,11 +515,14 @@ elif [[ -d "${artifact_dir}/arm64_standard" && ! -d "${artifact_dir}/arm64_2gb" 
 fi
 if [[ -n "${arm64_profile_dir}" ]]; then
     memory_profile="${arm64_profile_dir#arm64_}"
-    board_profile=imx8mm
-    if [[ "${arm64_profile_dir}" == imx95_frdm ]]; then
-        memory_profile=standard
-        board_profile=imx95_frdm
-    fi
+    case "${arm64_profile_dir}" in
+        arm64_standard) board_profile=generic_arm64 ;;
+        arm64_2gb) board_profile=imx8mm ;;
+        imx95_frdm)
+            memory_profile=standard
+            board_profile=imx95_frdm
+            ;;
+    esac
     system_sha=$(sha256sum "${artifact_dir}/${arm64_profile_dir}/system.img" | cut -d' ' -f1)
     vendor_sha=$(sha256sum "${artifact_dir}/${arm64_profile_dir}/vendor.img" | cut -d' ' -f1)
     sbom_sha=$(sha256sum "${artifact_dir}/${arm64_profile_dir}/sbom.spdx.json" | cut -d' ' -f1)

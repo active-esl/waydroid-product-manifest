@@ -163,8 +163,11 @@ defined separately in the [build and promotion plan](docs/build-plan.md):
 | --- | --- | --- | --- | --- |
 | R13 / LineageOS 20 | `standard` | R13 `memory_profile=standard` | `lineage_waydroid_arm64` | Legacy customer qualification |
 | R13 / LineageOS 20 | `2gb` | Pending promotion to the R13 workflow | `lineage_waydroid_aesl_2gb_arm64_only` | Legacy constrained products |
-| R16 / LineageOS 23.2 | `standard` | `arm64_standard` | `lineage_waydroid_arm64_only` | Preferred maintained baseline |
+| R16 / LineageOS 23.2 | `standard` | `arm64_standard` | `lineage_waydroid_arm64_only` | Generic ARM64 baseline; no 2 GB low-RAM setting, no board-specific vendor claim |
 | R16 / LineageOS 23.2 | `2gb` | `arm64_2gb` | `lineage_waydroid_aesl_2gb_arm64_only` | Preferred constrained baseline |
+
+FRDM i.MX95 has a separate `imx95_frdm` scope for its board-specific standard
+vendor product. The generic `arm64_standard` scope does not substitute for it.
 
 ### Build and board-test status
 

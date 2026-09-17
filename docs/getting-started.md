@@ -40,22 +40,21 @@ Choose two inputs:
 | Input | Use |
 | --- | --- |
 | `build_scope=all` | Normal release validation: x86_64 plus both ARM64 profiles |
-| `build_scope=arm64_standard` | Rebuild only the standard ARM64 profile |
+| `build_scope=arm64_standard` | Generic ARM64 standard baseline; no 2 GB low-RAM setting, not an i.MX95 vendor image |
 | `build_scope=arm64_2gb` | Rebuild only the constrained ARM64 profile used by Jaguar Screen integration |
+| `build_scope=imx95_frdm` | FRDM i.MX95 standard vendor product; fails closed without reviewed i.MX95 vendor inputs |
 | `build_scope=x86_64` | Framework compatibility test |
 | `build_scope=x86_64_2gb` | Host-side check of the shared 2 GB Android policy |
 | `arm64_variant=userdebug` | Integration and diagnosis; the default |
 | `arm64_variant=user` | Production-gated ARM64 build; still requires release and board acceptance |
 
-The Actions run, job and uploaded artifact identify the selected target. For
-`arm64_2gb` they say **Jaguar Screen i.MX8MM 2 GB**; `arm64_standard` says
-**i.MX8MM standard vendor candidate**. `all` is labelled as multiple targets,
-and the x86_64 scopes are labelled Framework. The existing artifact directories
-(`arm64_2gb`, `arm64_standard`, `x86_64` and `x86_64_2gb`) remain stable for
-consumers. The uploaded Actions artifact name changed from
-`aesl-android-r16-lineage-23.2-<run>-<attempt>` to
-`aesl-android-r16-<target>-<run>-<attempt>`; consumers that select artifacts by
-name must use the new target slug.
+The Actions run, job and uploaded artifact distinguish **Generic ARM64 standard
+baseline**, **Jaguar Screen i.MX8MM 2 GB**, and **FRDM i.MX95 standard vendor**.
+The generic baseline is not evidence that its `vendor.img` works on FRDM. The
+existing artifact directories (`arm64_standard`, `arm64_2gb`, `imx95_frdm`,
+`x86_64`, `x86_64_2gb`) remain stable. Artifact-name consumers must use the
+scope-specific slug, such as `generic-arm64-standard-baseline` or
+`frdm-imx95-standard-vendor`.
 
 The workflow always builds from
 [`locks/lineage-23.2-lock.xml`](../locks/lineage-23.2-lock.xml). Do not build a
