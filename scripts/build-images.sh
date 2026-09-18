@@ -201,6 +201,15 @@ sync_locked_sources() {
     local attempt sync_jobs="${jobs}"
     local -a projects=("$@")
 
+    # A local-only checkout with an absent pinned object can leave a new
+    # project with an invalid HEAD. Fetch first so repo never attempts that
+    # checkout; this is needed for newly added shallow NXP release projects.
+    if ! python3 "${repo_root}/scripts/check-lock-objects.py" \
+        --lock "${lock_file}" --workspace "${android_dir}" "${projects[@]}"; then
+        echo "Fetching missing locked Git objects before checkout"
+        run_repo_sync "${sync_jobs}" --network-only "${projects[@]}" \
+            || die "repo network sync failed before checkout"
+    fi
     if run_repo_sync "${sync_jobs}" --local-only "${projects[@]}"; then
         return 0
     fi
