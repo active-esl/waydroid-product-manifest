@@ -45,7 +45,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Regression-test source lock validation
-        run: python3 scripts/test-validate-lock.py
+        run: |
+          python3 scripts/test-validate-lock.py
+          python3 scripts/test-lock-delta.py
       - name: Regression-test Android CI resource policy
         run: python3 scripts/test-build-resource-policy.py
       - name: Install pinned Android repo launcher
