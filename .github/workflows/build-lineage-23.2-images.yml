@@ -93,9 +93,16 @@ jobs:
           OUTPUT_DIR: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
         run: install -m 0644 "${ATTESTATION_BUNDLE}" "${OUTPUT_DIR}/provenance.sigstore.json"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        if: always()
+        # The FRDM vendor image may contain licence-controlled GPU/media
+        # components. Retain it on the runner until redistribution is reviewed.
+        if: ${{ always() && inputs.build_scope != 'imx95_frdm' }}
         with:
           name: aesl-android-r16-${{ inputs.build_scope == 'arm64_2gb' && 'imx8mm-jaguar-screen-2gb' || inputs.build_scope == 'arm64_standard' && 'generic-arm64-standard-baseline' || inputs.build_scope == 'imx95_frdm' && 'frdm-imx95-standard-vendor' || inputs.build_scope == 'x86_64' && 'framework-x86_64' || inputs.build_scope == 'x86_64_2gb' && 'framework-x86_64-2gb' || 'multiple-targets-x86_64-arm64-standard-2gb' }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: /yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: 30
+      - name: Locate private FRDM build evidence
+        if: ${{ always() && inputs.build_scope == 'imx95_frdm' }}
+        run: |
+          echo 'FRDM build evidence remains on the self-hosted runner at:' >> "$GITHUB_STEP_SUMMARY"
+          echo '/yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}' >> "$GITHUB_STEP_SUMMARY"
