@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -20,7 +21,8 @@ with tempfile.TemporaryDirectory() as directory:
     checkout = root / "src" / "project"
     checkout.mkdir(parents=True)
     subprocess.run(["git", "init", "-q", str(checkout)], check=True)
-    subprocess.run(["git", "-C", str(checkout), "-c", "user.name=Test",
+    subprocess.run(["git", "-C", str(checkout), "-c", "commit.gpgsign=false",
+                    "-c", "user.name=Test",
                     "-c", "user.email=test@example.invalid", "commit", "-q",
                     "--allow-empty", "-m", "first"], check=True)
     revision = subprocess.check_output(
@@ -31,5 +33,12 @@ with tempfile.TemporaryDirectory() as directory:
     assert module.missing_objects(lock, root / "empty", ["project"]) == ["project"]
     lock.write_text('<manifest><project path="project" revision="{}"/></manifest>'.format("0" * 40))
     assert module.missing_objects(lock, root / "src", ["project"]) == ["project"]
+    lock.write_text('<manifest><project name="project" revision="{}"/></manifest>'.format(revision))
+    assert module.missing_objects(lock, root / "src", ["project"]) == []
+    invalid = subprocess.run(
+        [sys.executable, str(script), "--lock", str(lock), "--workspace", str(root / "src"), "unknown"],
+        capture_output=True, text=True, check=False,
+    )
+    assert invalid.returncode == 2
 
 print("locked-object preflight regression tests passed")
