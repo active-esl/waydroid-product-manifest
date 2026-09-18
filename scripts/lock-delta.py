@@ -33,12 +33,14 @@ def main() -> int:
         print("__FULL__")
         return 0
 
-    if previous.keys() != current.keys():
+    # Removed projects need a full reconciliation. Added projects can be
+    # fetched directly alongside revisions that changed in the existing lock.
+    if not previous.keys() <= current.keys():
         print("__FULL__")
         return 0
 
     for project_path in sorted(current):
-        if previous[project_path] != current[project_path]:
+        if project_path not in previous or previous[project_path] != current[project_path]:
             print(project_path)
     return 0
 
