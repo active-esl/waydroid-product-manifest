@@ -154,10 +154,15 @@ PY
 
 run_repo_sync() {
     local sync_jobs="$1" sync_pid sync_status
+    local -a sync_options=(-c --no-tags --fail-fast --force-sync -j"${sync_jobs}")
     shift
 
+    # -d resets the checkout and is incompatible with network-only (-n).
+    if [[ "${1:-}" != --network-only ]]; then
+        sync_options+=(--force-checkout -d)
+    fi
     setsid env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
-        repo sync -c --no-tags --fail-fast --force-checkout --force-sync -d -j"${sync_jobs}" "$@" &
+        repo sync "${sync_options[@]}" "$@" &
     sync_pid=$!
     trap 'kill -TERM -- "-${sync_pid}" 2>/dev/null || true' INT TERM
     while kill -0 "${sync_pid}" 2>/dev/null; do
