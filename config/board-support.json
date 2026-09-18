@@ -85,18 +85,18 @@
       "support_end": null,
       "expected_lifetime_years": null,
       "gpu_stack": "NXP Mali Bionic userspace / matching host kbase ABI",
-      "media_stack": "NXP i.MX Codec2/Hantro",
-      "vendor_source": "NXP android-16.0.0_2.0.0 candidate; proprietary overlay licence review required",
+      "media_stack": "NXP i.MX Codec2/Wave6 V4L2",
+      "vendor_source": "NXP public android-16.0.0_2.0.0 source; accepted private GPU/allocator android-16.0.0_1.2.0 inputs pinned by digest",
       "host_bsp_contract": "Foundries LmP NXP BSP; exact release, kernel and Mali ABI pending",
       "evidence_state": {
-        "android_image": "blocked: explicit i.MX95 Mali/Hantro vendor image not built",
+        "android_image": "blocked: explicit i.MX95 Mali/Wave6 V4L2 vendor image not built",
         "host_build": "built: Foundries development target 2936",
         "staging": "target 2936 exercised with R16 system plus incompatible i.MX8MM vendor image",
         "acceptance": "blocked: Android userspace starts but EGL fails on the DPU-only DRM node"
       },
       "blocked_release_gates": [
-        "obtain and hash NXP android-16.0.0_2.0.0 proprietary overlay",
-        "pin NXP open-source projects in reviewed source lock",
+        "verify accepted NXP 1.2.0 GPU/allocator inputs against pinned digests",
+        "verify pinned NXP open-source projects against the reviewed source lock",
         "prove dma-buf import across host DPU and Android Mali allocator",
         "prove GPU and VPU operation without software fallback",
         "complete memory, suspend/resume and rollback acceptance"

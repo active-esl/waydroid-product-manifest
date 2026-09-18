@@ -25,7 +25,7 @@ both; do not infer compatibility from the i.MX8 or i.MX9 family name.
 | Machine | Working build | Staged candidate | Current boundary |
 | --- | --- | --- | --- |
 | Jaguar Screen i.MX8MM | R13 standard: Android run 34838947265 with Foundries target 2887 | Foundries target 2943 is installed from isolated tag `r16-jaguar-screen` | The old R16 `system.img` is truncated; replacement run 35076252596 is built but not staged |
-| FRDM i.MX95 | Foundries development host target 2936 | The R16 pair from run 34856380503 reached partial startup evidence on FRDM | Replace the corrupt shared `system.img`; the i.MX8MM `vendor.img` is also not an FRDM product image, so build the i.MX95 Mali/Hantro vendor class |
+| FRDM i.MX95 | Foundries development host target 2936 | The R16 pair from run 34856380503 reached partial startup evidence on FRDM | Replace the corrupt shared `system.img`; the i.MX8MM `vendor.img` is also not an FRDM product image, so build the i.MX95 Mali/Wave6 V4L2 vendor class |
 
 “Working build” in this table identifies the highest component gate that has
 passed. Only Jaguar R13 has passed the complete Android UI and acceleration
@@ -144,7 +144,7 @@ and image-APEX evidence, but it is not a complete FRDM Android build: the
 paired `vendor.img` from run 34856380503 targets i.MX8MM Etnaviv, while FRDM
 uses the i.MX95 DPU/Mali path. EGL therefore failed to create a configuration.
 
-The next Android artifact is an explicit i.MX95 Mali/Hantro vendor image,
+The next Android artifact is an explicit i.MX95 Mali/Wave6 V4L2 vendor image,
 paired with the reviewed shared ARM64 system image and tested again on target
 2936 or its exact successor.
 
