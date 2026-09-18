@@ -105,7 +105,7 @@ The current lanes are intentionally separate:
 | Machine | Ready now | Still required |
 | --- | --- | --- |
 | Jaguar Screen i.MX8MM | Proven R13 standard product; built R16 2 GB Android artifacts | Successful R16 screen-host target and a fresh physical-board test |
-| FRDM i.MX95 | Successful development host target 2936; shared R16 ARM64 system-image candidate | Board-specific i.MX95 Mali/Hantro vendor image and full hardware acceptance |
+| FRDM i.MX95 | Successful development host target 2936; shared R16 ARM64 system-image candidate | Board-specific i.MX95 Mali/Wave6 V4L2 vendor image and full hardware acceptance |
 
 See the README's [machine-specific status tables](../README.md#jaguar-screen--imx8mm)
 for the exact built, staged and working states.

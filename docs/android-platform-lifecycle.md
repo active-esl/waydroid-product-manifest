@@ -22,7 +22,7 @@ reviewed Android/Lineage core
 ├── ARM64 standard profile
 ├── ARM64 2 GB profile
 ├── i.MX8MM Etnaviv/V4L2 vendor contract
-└── i.MX95 NXP Mali/Hantro vendor contract
+└── i.MX95 NXP Mali/Wave6 V4L2 vendor contract
 ```
 
 ARM64 is an instruction-set boundary, not a hardware compatibility guarantee.
@@ -48,7 +48,7 @@ The controlled build identity is the tuple:
   production-gated `user` release.
 
 The initial classes are i.MX8MM/Mesa-Etnaviv/V4L2 for Jaguar Screen and
-i.MX95/NXP-Mali/Hantro for FRDM i.MX95. Further i.MX8 and i.MX9 SoCs enter as
+i.MX95/NXP-Mali/Wave6 V4L2 for FRDM i.MX95. Further i.MX8 and i.MX9 SoCs enter as
 separate candidate classes; family membership alone is not evidence that an
 existing vendor image is reusable.
 

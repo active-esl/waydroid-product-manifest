@@ -217,7 +217,7 @@ tag. The detailed attempt, checksum and rollback record is in
 | Product lane | Android images | Foundries host | Staging | Board result |
 | --- | --- | --- | --- | --- |
 | R16 host integration | Rejected run 34856380503 was used for historical integration only; its `system.img` is truncated and `vendor.img` is for i.MX8MM | [Target 2936](https://app.foundries.io/factories/dynamic-devices/targets/2936) from `main-imx95-frdm-devel` **BUILT** | Historical host/image pair was **STAGED** on FRDM; do not reuse it | **BLOCKED after partial boot** — Android 16 userspace starts, but EGL fails on the DPU-only DRM node |
-| R16 complete FRDM product | Shared ARM64 `system.img` candidate exists; i.MX95 `vendor.img` **NOT BUILT** | Target 2936 is the usable development host baseline | **NOT STAGED** as a valid board-specific pair | **BLOCKED** pending the reviewed i.MX95 Mali/Hantro vendor image |
+| R16 complete FRDM product | Shared ARM64 `system.img` candidate exists; i.MX95 `vendor.img` **NOT BUILT** | Target 2936 is the usable development host baseline | **NOT STAGED** as a valid board-specific pair | **BLOCKED** pending the reviewed i.MX95 Mali/Wave6 V4L2 vendor image |
 
 In short: the Jaguar R13 tuple is the currently working screen build; the
 Jaguar R16 replacement Android pair has passed CI integrity validation but

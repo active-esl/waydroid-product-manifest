@@ -10,7 +10,7 @@ the board bring-up documents; they do not change this sequence.
 | --- | --- | --- | --- | --- |
 | Jaguar Screen R13 standard | Proven legacy screen baseline | `lineage_waydroid_arm64` from the R13 `lineage-20` lane | Foundries `main-jaguar-screen` | Maintain; rebuild only for an approved R13 fix or customer qualification |
 | Jaguar Screen R16 2 GB | Active replacement for the screen product | `lineage_waydroid_aesl_2gb_arm64_only`; i.MX8MM/Etnaviv vendor contract | Foundries `r16-jaguar-screen` → `platform-r16-jaguar-screen` | Active integration |
-| FRDM i.MX95 R16 | Active i.MX95 product lane | Proposed explicit `lineage_waydroid_aesl_imx95_arm64_only`; i.MX95 Mali/Hantro vendor contract | Foundries `main-imx95-frdm-devel` during integration | Host baseline built; Android vendor product not yet built |
+| FRDM i.MX95 R16 | Active i.MX95 product lane | `lineage_waydroid_aesl_imx95_arm64_only`; i.MX95 Mali/Wave6 V4L2 vendor contract | Foundries `main-imx95-frdm-devel` during integration | Host baseline built; Android vendor product not yet built |
 
 The R13 2 GB and R16 standard ARM64 profiles remain registered capabilities,
 but they are not current board-delivery priorities. Do not spend a full build
@@ -84,7 +84,7 @@ integration passes.
 ### FRDM i.MX95 R16
 
 Foundries target 2936 is the current development-host baseline. The next build
-is an explicit i.MX95 Android vendor product using the Mali/Hantro contract,
+is an explicit i.MX95 Android vendor product using the Mali/Wave6 V4L2 contract,
 not another generic host and not the i.MX8MM Etnaviv `vendor.img`. The shared
 R16 ARM64 system content may be reused only where its ABI is proven. Pair the
 new i.MX95 Android artifact with target 2936 or an exact successor, then run
