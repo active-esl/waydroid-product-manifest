@@ -403,6 +403,13 @@ for patch_state in "${patch_states[@]}"; do
 done
 printf '%s\n' "${!desired_patch_projects[@]}" | sort > "${patch_projects_file}"
 
+if [[ "${build_scope}" == imx95_frdm ]]; then
+    python3 "${repo_root}/scripts/verify-frdm-gpu-inputs.py" \
+        --workspace "${android_dir}" \
+        --stage /yocto/.codex-imx95-private-stage \
+        --output "${artifact_dir}/frdm-gpu-inputs.json"
+fi
+
 unset OUT_DIR_COMMON_BASE
 if [[ -z "${SOURCE_DATE_EPOCH:-}" ]]; then
     source_epoch="$(tr -d '[:space:]' < "${source_date_epoch_file}")"
