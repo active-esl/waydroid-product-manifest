@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import argparse
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
 def missing_objects(lock: Path, workspace: Path, paths: list[str]) -> list[str]:
-    projects = {project.attrib["path"]: project.attrib["revision"]
+    projects = {(project.get("path") or project.attrib["name"]): project.attrib["revision"]
                 for project in ET.parse(lock).getroot().iter("project")}
     selected = paths or list(projects)
     unknown = sorted(set(selected) - projects.keys())
@@ -40,7 +41,11 @@ def main() -> int:
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("paths", nargs="*")
     args = parser.parse_args()
-    missing = missing_objects(args.lock, args.workspace, args.paths)
+    try:
+        missing = missing_objects(args.lock, args.workspace, args.paths)
+    except (OSError, ValueError, KeyError, ET.ParseError) as error:
+        print("invalid locked-object preflight: {}".format(error), file=sys.stderr)
+        return 2
     if missing:
         print("Locked Git objects absent for {} project(s): {}".format(
             len(missing), ", ".join(missing[:5])))
