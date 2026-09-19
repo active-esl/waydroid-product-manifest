@@ -10,12 +10,21 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PATCH_STATE = REPO_ROOT / "scripts" / "patch-state.py"
-REQUIRED_HWC = "b92200ac592ed43acd9f1f1bc41c09bc407b1732"
+REAL_LOCK = REPO_ROOT / "locks" / "lineage-23.2-lock.xml"
+REAL_REQUIREMENTS = REPO_ROOT / "locks" / "lineage-23.2-required-revisions.tsv"
 
 
-def run(lock: Path, patch_root: Path) -> subprocess.CompletedProcess[str]:
+def run(
+    lock: Path, patch_root: Path, requirements: Path
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["python3", str(PATCH_STATE), str(lock), str(patch_root)],
+        [
+            "python3",
+            str(PATCH_STATE),
+            str(lock),
+            str(patch_root),
+            str(requirements),
+        ],
         check=False,
         capture_output=True,
         text=True,
@@ -32,32 +41,46 @@ def write_lock(path: Path, revision: str, include_hwc: bool = True) -> None:
 
 
 def main() -> int:
+    project, required_revision = next(
+        line.split("\t")
+        for raw_line in REAL_REQUIREMENTS.read_text().splitlines()
+        if (line := raw_line.strip()) and not line.startswith("#")
+    )
+    assert project == "hardware/waydroid"
+
     with tempfile.TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         patch_root = root / "patches"
         patch_root.mkdir()
-        requirements = patch_root / "required-revisions.tsv"
-        requirements.write_text(f"hardware/waydroid\t{REQUIRED_HWC}\n")
+        requirements = root / "required-revisions.tsv"
+        requirements.write_text(f"{project}\t{required_revision}\n")
         lock = root / "lock.xml"
 
-        write_lock(lock, REQUIRED_HWC)
-        exact = run(lock, patch_root)
+        real = run(REAL_LOCK, patch_root, REAL_REQUIREMENTS)
+        assert real.returncode == 0, real.stderr
+
+        write_lock(lock, required_revision)
+        exact = run(lock, patch_root, requirements)
         assert exact.returncode == 0, exact.stderr
 
         write_lock(lock, "0" * 40)
-        mismatch = run(lock, patch_root)
+        mismatch = run(lock, patch_root, requirements)
         assert mismatch.returncode != 0, mismatch.stdout
         assert "required patch dependency revision mismatch" in mismatch.stderr
 
-        write_lock(lock, REQUIRED_HWC, include_hwc=False)
-        missing = run(lock, patch_root)
+        write_lock(lock, required_revision, include_hwc=False)
+        missing = run(lock, patch_root, requirements)
         assert missing.returncode != 0, missing.stdout
         assert "required patch dependency is absent" in missing.stderr
 
         requirements.write_text("hardware/waydroid b92200ac\n")
-        malformed = run(lock, patch_root)
+        malformed = run(lock, patch_root, requirements)
         assert malformed.returncode != 0, malformed.stdout
         assert "invalid required revision" in malformed.stderr
+
+        absent = run(lock, patch_root, root / "absent.tsv")
+        assert absent.returncode != 0, absent.stdout
+        assert "required revisions file is missing" in absent.stderr
 
     print("patch-state dependency regression tests passed")
     return 0

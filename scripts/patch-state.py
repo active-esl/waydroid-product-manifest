@@ -10,12 +10,10 @@ import xml.etree.ElementTree as ET
 
 
 def validate_required_revisions(
-    patch_root: pathlib.Path, revisions: dict[str, str]
+    requirements: pathlib.Path, revisions: dict[str, str]
 ) -> None:
-    requirements = patch_root / "required-revisions.tsv"
-    if not requirements.exists():
-        return
-
+    if not requirements.is_file():
+        raise ValueError(f"required revisions file is missing: {requirements}")
     for line_number, raw_line in enumerate(requirements.read_text().splitlines(), 1):
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -37,17 +35,21 @@ def validate_required_revisions(
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
-        print("usage: patch-state.py SOURCE_LOCK PATCH_ROOT", file=sys.stderr)
+    if len(sys.argv) != 4:
+        print(
+            "usage: patch-state.py SOURCE_LOCK PATCH_ROOT REQUIRED_REVISIONS",
+            file=sys.stderr,
+        )
         return 2
 
     lock_path = pathlib.Path(sys.argv[1])
     patch_root = pathlib.Path(sys.argv[2])
+    requirements = pathlib.Path(sys.argv[3])
     revisions = {
         (project.get("path") or project.get("name")): project.get("revision", "")
         for project in ET.parse(lock_path).getroot().findall("project")
     }
-    validate_required_revisions(patch_root, revisions)
+    validate_required_revisions(requirements, revisions)
     grouped: dict[str, list[pathlib.Path]] = {}
     for patch in sorted(patch_root.rglob("*.patch")):
         project = patch.parent.relative_to(patch_root).as_posix()
