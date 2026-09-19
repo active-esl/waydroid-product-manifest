@@ -8,10 +8,26 @@ the lock can also contain projects excluded by the selected groups.
 
 from __future__ import annotations
 
+import os
+import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+
+GIT_ENV_KEYS = (
+    "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+)
+
+
+def clean_git_environment() -> dict[str, str]:
+    environment = os.environ.copy()
+    for key in GIT_ENV_KEYS:
+        environment.pop(key, None)
+    environment["GIT_NO_REPLACE_OBJECTS"] = "1"
+    return environment
 
 
 def main() -> int:
@@ -38,6 +54,16 @@ def main() -> int:
     except (ET.ParseError, KeyError, OSError) as error:
         print(f"cannot inspect source lock: {error}", file=sys.stderr)
         return 2
+    invalid_revisions = [
+        path for path, revision in projects.items()
+        if not re.fullmatch(r"[0-9a-f]{40}", revision)
+    ]
+    if invalid_revisions:
+        print(
+            f"source lock contains a non-immutable revision: {invalid_revisions[0]}",
+            file=sys.stderr,
+        )
+        return 2
 
     try:
         tracked = [
@@ -51,6 +77,7 @@ def main() -> int:
         return 0
 
     drifted: list[str] = []
+    environment = clean_git_environment()
     for path in tracked:
         relative = Path(path)
         if relative.is_absolute() or ".." in relative.parts or path not in projects:
@@ -84,6 +111,7 @@ def main() -> int:
             capture_output=True,
             text=True,
             check=False,
+            env=environment,
         )
         if replacement_refs.returncode or replacement_refs.stdout:
             print(f"replacement refs are not allowed in a locked build: {path}", file=sys.stderr)
@@ -94,6 +122,7 @@ def main() -> int:
             capture_output=True,
             text=True,
             check=False,
+            env=environment,
         )
         if not result.returncode:
             tracked_status = subprocess.run(
@@ -104,6 +133,7 @@ def main() -> int:
                 capture_output=True,
                 text=True,
                 check=False,
+                env=environment,
             )
             if tracked_status.returncode or tracked_status.stdout:
                 print(f"cannot resync project with tracked local changes: {path}", file=sys.stderr)
@@ -116,6 +146,7 @@ def main() -> int:
                 capture_output=True,
                 text=True,
                 check=False,
+                env=environment,
             )
             if residue_status.returncode:
                 print(f"cannot inspect project residue: {path}", file=sys.stderr)

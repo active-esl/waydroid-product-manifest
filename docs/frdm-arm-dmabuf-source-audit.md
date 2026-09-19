@@ -47,3 +47,11 @@ affected locked projects before resyncing them, then repeats the verification.
 Tracked local edits remain a hard failure. This detects persistent runner
 source changes before the Android build starts; the immutable lock remains the
 authority for every selected project revision.
+
+The CI checkout treats untracked and ignored files inside locked source
+projects as disposable residue. Android build products and compiler caches are
+configured under the workspace-level `out-*` directories, outside those
+project trees. Before removing residue, CI prints `git clean -ndx` output with
+the owning project path to the retained build log. Nested untracked Git
+repositories are not force-deleted; they remain visible to the final drift gate
+and stop the build for manual inspection.

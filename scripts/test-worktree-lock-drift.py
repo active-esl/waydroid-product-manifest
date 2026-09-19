@@ -85,6 +85,12 @@ def main() -> int:
         assert not (project / "untracked.txt").exists()
         assert not (project / "ignored.txt").exists()
         assert check(lock, project_list, worktree) == ""
+        result = subprocess.run(
+            ["python3", str(CLEANER), str(worktree), "."],
+            capture_output=True, text=True, check=False,
+        )
+        assert result.returncode == 2
+        assert "refusing unsafe project path" in result.stderr
 
         temporarily_missing = worktree / "temporarily-missing-waydroid"
         project.rename(temporarily_missing)

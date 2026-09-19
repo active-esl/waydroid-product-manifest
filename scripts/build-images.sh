@@ -388,6 +388,11 @@ if [[ "${full_sync}" == true ]]; then
     echo "Restoring the complete locked source tree from the /yocto object cache"
     source_sync_mode="full"
     sync_locked_sources
+    full_sync_drift="$(python3 "${repo_root}/scripts/worktree-lock-drift.py" \
+        "${lock_file}" "${android_dir}/.repo/project.list" "${android_dir}")" \
+        || die "Cannot validate the fully restored project inventory"
+    [[ "${full_sync_drift}" != __FULL__ ]] \
+        || die "Full source restore produced an inventory outside the immutable lock"
     mapfile -t full_sync_projects \
         < <(sed -e '/^[[:space:]]*$/d' "${android_dir}/.repo/project.list")
     (( ${#full_sync_projects[@]} > 0 )) \
