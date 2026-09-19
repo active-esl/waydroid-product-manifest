@@ -27,6 +27,12 @@ jobs:
           python3 scripts/test-validate-lock.py
           python3 scripts/test-patch-state.py
 
+      - name: Verify release-critical remote lock revisions
+        run: |
+          python3 scripts/verify-lock-remote.py \
+            locks/lineage-23.2-lock.xml \
+            locks/lineage-23.2-remote-locks.tsv
+
       - name: Test Android CI and attestation policy
         run: python3 scripts/test-build-resource-policy.py
 
