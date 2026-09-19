@@ -44,7 +44,10 @@ At the source-sync boundaries, the CI worktree gate verifies every selected
 project's clean tracked state, non-symlinked location beneath the Android
 worktree, and locked `HEAD`. It removes untracked and ignored residue from the
 affected locked projects before resyncing them, then repeats the verification.
-Tracked local edits remain a hard failure. This detects persistent runner
+Tracked local edits remain a hard failure for local and developer builds. On
+the dedicated CI runner, the same explicit cleanup authorization inventories
+their status and schedules the affected projects for `repo sync
+--force-checkout -d` at the locked revisions. This detects persistent runner
 source changes before the Android build starts; the immutable lock remains the
 authority for every selected project revision.
 

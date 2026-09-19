@@ -29,6 +29,19 @@ def check(lock: Path, project_list: Path, worktree: Path) -> str:
     return result.stdout.strip()
 
 
+def check_authorized(lock: Path, project_list: Path, worktree: Path) -> str:
+    result = subprocess.run(
+        ["python3", str(CHECKER), str(lock), str(project_list), str(worktree)],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "ALLOW_LOCKED_SOURCE_CLEANUP": "true"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Tracked source changes scheduled for locked resync" in result.stderr
+    return result.stdout.strip()
+
+
 def check_failure(lock: Path, project_list: Path, worktree: Path) -> str:
     result = subprocess.run(
         ["python3", str(CHECKER), str(lock), str(project_list), str(worktree)],
@@ -78,6 +91,7 @@ def main() -> int:
         assert "cannot resync project with tracked local changes" in check_failure(
             lock, project_list, worktree
         )
+        assert check_authorized(lock, project_list, worktree) == "hardware/waydroid"
         (project / "tracked.txt").write_text("original\n")
         (project / "untracked.txt").write_text("must not enter a locked build\n")
         assert check(lock, project_list, worktree) == "hardware/waydroid"
