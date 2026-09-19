@@ -450,8 +450,11 @@ for patch_state in "${patch_states[@]}"; do
             sync_locked_sources "${patch_project}"
             synchronized_projects["${patch_project}"]=1
         fi
-        patch_projects_to_apply+=("${patch_project}")
     fi
+    # Source reconciliation may have restored a project to its locked base
+    # without changing the patch digest marker. Always run the strict patch
+    # helper so it either applies missing patches or proves they are present.
+    patch_projects_to_apply+=("${patch_project}")
 done
 if [[ -s "${patch_projects_file}" ]]; then
     while IFS= read -r previous_patch_project; do
@@ -463,13 +466,11 @@ if [[ -s "${patch_projects_file}" ]]; then
     done < "${patch_projects_file}"
 fi
 if (( ${#patch_projects_to_apply[@]} > 0 )); then
-    echo "Applying patches for ${#patch_projects_to_apply[@]} changed project(s)"
+    echo "Verifying or applying patches for ${#patch_projects_to_apply[@]} project(s)"
     run_with_heartbeat "Waydroid patch application" \
         timeout --foreground --kill-after=60s 30m \
         "${repo_root}/scripts/apply-waydroid-patches-strict.sh" \
         "${android_dir}" "${patch_projects_to_apply[@]}"
-else
-    echo "Patch state already matches; preserving patched source projects"
 fi
 printf '%s\n' \
     "lock_sha256=${lock_sha}" \
@@ -482,6 +483,7 @@ printf '%s\n' \
     "source_sync_mode=${source_sync_mode}" \
     "changed_projects=${#changed_projects[@]}" \
     "patch_projects_applied=${#patch_projects_to_apply[@]}" \
+    "patch_projects_reconciled=${#patch_projects_to_apply[@]}" \
     "android_workspace=${android_dir}" \
     > "${source_cache_evidence}"
 for patch_state in "${patch_states[@]}"; do
