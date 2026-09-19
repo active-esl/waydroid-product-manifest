@@ -170,6 +170,12 @@ def main() -> int:
                 [
                     "git", "--no-replace-objects", "-C", str(project_dir), "status",
                     "--porcelain=v1", "--untracked-files=all", "--ignored=matching",
+                    "--", ".",
+                    *[
+                        f":(exclude,literal){other[len(path) + 1:]}"
+                        for other in tracked
+                        if other.startswith(f"{path}/")
+                    ],
                 ],
                 capture_output=True,
                 text=True,
