@@ -77,7 +77,9 @@ def main() -> int:
 
     try:
         tracked = [
-            line.strip() for line in project_list.read_text().splitlines() if line.strip()
+            line.strip().rstrip("/")
+            for line in project_list.read_text().splitlines()
+            if line.strip().rstrip("/")
         ]
     except OSError as error:
         print(f"cannot inspect project inventory: {error}", file=sys.stderr)
@@ -169,7 +171,7 @@ def main() -> int:
             residue_status = subprocess.run(
                 [
                     "git", "--no-replace-objects", "-C", str(project_dir), "status",
-                    "--porcelain=v1", "--untracked-files=all", "--ignored=matching",
+                    "--porcelain=v1", "-z", "--untracked-files=all", "--ignored=matching",
                 ],
                 capture_output=True,
                 text=True,
@@ -185,8 +187,13 @@ def main() -> int:
                 if other.startswith(f"{path}/")
             }
             residue_records = []
-            for record in residue_status.stdout.splitlines():
+            for record in residue_status.stdout.split("\0"):
+                if not record:
+                    continue
                 reported_path = record[3:].rstrip("/") if len(record) >= 4 else ""
+                # A selected nested checkout is verified independently below.
+                # Filter only the parent's untracked/ignored view of that root;
+                # every tracked status code remains visible and fails closed.
                 nested_noise = record[:2] in {"??", "!!"} and any(
                     reported_path == root or reported_path.startswith(f"{root}/")
                     for root in nested_roots
