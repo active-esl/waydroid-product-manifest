@@ -170,12 +170,6 @@ def main() -> int:
                 [
                     "git", "--no-replace-objects", "-C", str(project_dir), "status",
                     "--porcelain=v1", "--untracked-files=all", "--ignored=matching",
-                    "--", ".",
-                    *[
-                        f":(exclude,literal){other[len(path) + 1:]}"
-                        for other in tracked
-                        if other.startswith(f"{path}/")
-                    ],
                 ],
                 capture_output=True,
                 text=True,
@@ -185,7 +179,21 @@ def main() -> int:
             if residue_status.returncode:
                 print(f"cannot inspect project residue: {path}", file=sys.stderr)
                 return 2
-            if residue_status.stdout:
+            nested_roots = {
+                other[len(path) + 1:].rstrip("/")
+                for other in tracked
+                if other.startswith(f"{path}/")
+            }
+            residue_records = []
+            for record in residue_status.stdout.splitlines():
+                reported_path = record[3:].rstrip("/") if len(record) >= 4 else ""
+                nested_noise = record[:2] in {"??", "!!"} and any(
+                    reported_path == root or reported_path.startswith(f"{root}/")
+                    for root in nested_roots
+                )
+                if not nested_noise:
+                    residue_records.append(record)
+            if residue_records:
                 if path not in drifted:
                     drifted.append(path)
         if result.returncode or result.stdout.strip() != projects[path]:
