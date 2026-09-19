@@ -53,6 +53,12 @@ def check_failure(lock: Path, project_list: Path, worktree: Path) -> str:
         capture_output=True,
         text=True,
         check=False,
+        env={
+            **os.environ,
+            "AESL_ALLOW_LOCKED_SOURCE_CLEANUP": "",
+            "GITHUB_ACTIONS": "false",
+            "RUNNER_NAME": "",
+        },
     )
     assert result.returncode == 2, result.stdout + result.stderr
     return result.stderr
@@ -105,7 +111,12 @@ def main() -> int:
         refused = subprocess.run(
             ["python3", str(CLEANER), str(worktree), "hardware/waydroid"],
             capture_output=True, text=True, check=False,
-            env={**os.environ, "AESL_ALLOW_LOCKED_SOURCE_CLEANUP": "true"},
+            env={
+                **os.environ,
+                "AESL_ALLOW_LOCKED_SOURCE_CLEANUP": "true",
+                "GITHUB_ACTIONS": "false",
+                "RUNNER_NAME": "",
+            },
         )
         assert refused.returncode == 2
         assert "refusing cleanup outside the authorized AESL CI runner" in refused.stderr
