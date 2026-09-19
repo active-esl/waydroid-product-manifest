@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
+import re
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -38,6 +39,14 @@ def selected_projects(path: pathlib.Path) -> list[tuple[str, str, str]]:
         project, url, ref = fields
         if project in seen:
             raise ValueError(f"duplicate remote-lock project: {project}")
+        if not re.fullmatch(
+            r"https://github\.com/active-esl/[A-Za-z0-9_.-]+\.git", url
+        ):
+            raise ValueError(f"unsupported remote-lock URL: {url}")
+        if not re.fullmatch(r"refs/(heads|tags)/[A-Za-z0-9][A-Za-z0-9._/-]*", ref):
+            raise ValueError(f"invalid remote-lock ref: {ref}")
+        if ".." in ref or "//" in ref or ref.endswith((".", "/")):
+            raise ValueError(f"invalid remote-lock ref: {ref}")
         seen.add(project)
         entries.append((project, url, ref))
     if not entries:
@@ -56,6 +65,11 @@ def verify(lock: pathlib.Path, remotes: pathlib.Path) -> None:
             revision = revisions.get(project)
             if revision is None:
                 raise ValueError(f"remote-lock project is absent from source lock: {project}")
+            if not re.fullmatch(r"[0-9a-f]{40}", revision):
+                raise ValueError(
+                    f"remote-lock revision is not an immutable commit SHA: "
+                    f"{project} {revision or '<empty>'}"
+                )
             checkout = root / str(index)
             checkout.mkdir()
             run("git", "init", "-q", cwd=checkout)
@@ -69,8 +83,27 @@ def verify(lock: pathlib.Path, remotes: pathlib.Path) -> None:
                 ref,
                 cwd=checkout,
             )
-            run("git", "cat-file", "-e", f"{revision}^{{commit}}", cwd=checkout)
-            run("git", "merge-base", "--is-ancestor", revision, "FETCH_HEAD", cwd=checkout)
+            resolved = run(
+                "git", "rev-parse", "--verify", f"{revision}^{{commit}}", cwd=checkout
+            )
+            if resolved != revision:
+                raise ValueError(
+                    f"remote-lock object does not resolve to its exact SHA: "
+                    f"{project} {revision} resolved as {resolved}"
+                )
+            ancestry = subprocess.run(
+                ["git", "merge-base", "--is-ancestor", revision, "FETCH_HEAD"],
+                cwd=checkout,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            if ancestry.returncode != 0:
+                raise ValueError(
+                    f"remote-lock revision is not reachable from declared ref: "
+                    f"{project} {revision} on {ref}"
+                )
             print(f"verified {project} {revision} on {ref}")
 
 
