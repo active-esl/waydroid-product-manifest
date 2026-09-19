@@ -25,6 +25,10 @@ def main() -> int:
             print(f"refusing unsafe project path: {path}", file=sys.stderr)
             return 2
         candidate = worktree / relative
+        if not candidate.exists():
+            # repo sync will recreate a selected project whose checkout was
+            # removed; there is no local residue to clean first.
+            continue
         try:
             project_dir = candidate.resolve(strict=True)
             project_dir.relative_to(worktree)

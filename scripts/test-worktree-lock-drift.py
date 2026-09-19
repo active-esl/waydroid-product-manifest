@@ -86,6 +86,13 @@ def main() -> int:
         assert not (project / "ignored.txt").exists()
         assert check(lock, project_list, worktree) == ""
 
+        temporarily_missing = worktree / "temporarily-missing-waydroid"
+        project.rename(temporarily_missing)
+        assert check(lock, project_list, worktree) == "hardware/waydroid"
+        clean(worktree, "hardware/waydroid")
+        temporarily_missing.rename(project)
+        assert check(lock, project_list, worktree) == ""
+
         (project / "tracked.txt").write_text("replacement content\n")
         git("-C", str(project), "add", "tracked.txt")
         git("-C", str(project), "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
@@ -120,6 +127,13 @@ def main() -> int:
         assert "refusing symlinked or escaped project path" in check_failure(
             lock, project_list, worktree
         )
+        project.unlink()
+        project.mkdir()
+        assert "refusing non-Git project path" in check_failure(
+            lock, project_list, worktree
+        )
+        project.rmdir()
+        real_project.rename(project)
         project_list.unlink()
         assert check(lock, project_list, worktree) == "__FULL__"
 

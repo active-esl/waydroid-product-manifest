@@ -73,6 +73,9 @@ def main() -> int:
         if project_dir != candidate or not beneath_worktree:
             print(f"refusing symlinked or escaped project path: {path}", file=sys.stderr)
             return 2
+        if not (project_dir / ".git").exists():
+            print(f"refusing non-Git project path: {path}", file=sys.stderr)
+            return 2
         replacement_refs = subprocess.run(
             [
                 "git", "--no-replace-objects", "-C", str(project_dir),
