@@ -39,7 +39,7 @@ def main() -> int:
             print(f"refusing symlinked or non-Git project path: {path}", file=sys.stderr)
             return 2
         result = subprocess.run(
-            ["git", "--no-replace-objects", "-C", str(project_dir), "clean", "-ffdqx"],
+            ["git", "--no-replace-objects", "-C", str(project_dir), "clean", "-fdqx"],
             check=False,
         )
         if result.returncode:

@@ -34,6 +34,7 @@ process or falling back to CPU readback.
 ```sh
 git clone https://github.com/active-esl/android_hardware_waydroid.git
 cd android_hardware_waydroid
+git verify-commit b92200ac592ed43acd9f1f1bc41c09bc407b1732
 git diff --check 9f94eaf967934193724223206f7b421d06f4d891 b92200ac592ed43acd9f1f1bc41c09bc407b1732
 git diff --stat 9f94eaf967934193724223206f7b421d06f4d891 b92200ac592ed43acd9f1f1bc41c09bc407b1732
 git diff 9f94eaf967934193724223206f7b421d06f4d891 b92200ac592ed43acd9f1f1bc41c09bc407b1732 -- hwcomposer

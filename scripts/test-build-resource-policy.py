@@ -82,6 +82,16 @@ def main() -> int:
     assert 'board_profile=imx8mm' in build_script
     assert 'board_profile=imx95_frdm' in build_script
     assert '"AESL_WAYDROID_BOARD_PROFILE = \\"${board_profile}\\""' in build_script
+    for source_integrity_gate in (
+        'cached_project_list_sha="$(cat .repo/aesl-project-list.sha256',
+        '"${cached_project_list_sha}" == "${project_list_sha}"',
+        'clean_project_residue "${full_sync_projects[@]}"',
+        'sha256sum .repo/project.list',
+        'remaining_drift="$(python3 "${repo_root}/scripts/worktree-lock-drift.py"',
+    ):
+        assert source_integrity_gate in build_script, (
+            f"missing persistent-worktree integrity gate: {source_integrity_gate}"
+        )
     for image_gate in (
         'validate_raw_android_image "${target_artifacts}/system.img"',
         'validate_raw_android_image "${target_artifacts}/vendor.img"',

@@ -304,6 +304,8 @@ manifest_url="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).
 cd "${android_dir}"
 
 cached_lock="$(cat .repo/aesl-source-lock.sha256 2>/dev/null || true)"
+cached_project_list_sha="$(cat .repo/aesl-project-list.sha256 2>/dev/null || true)"
+project_list_sha="$(sha256sum .repo/project.list 2>/dev/null | awk '{print $1}' || true)"
 cached_manifest_url="$(git --git-dir=.repo/manifests.git config --get remote.origin.url 2>/dev/null || true)"
 if [[ "${cached_lock}" == "${lock_sha}" && "${cached_manifest_url}" == "${manifest_url}" ]]; then
     repo_init_mode=reused
@@ -332,7 +334,13 @@ if [[ "${force_full_sync}" == true || "${force_full_sync}" == 1 ]]; then
     echo "A complete source resynchronization was explicitly requested"
     full_sync=true
 elif [[ "${cached_lock}" == "${lock_sha}" ]]; then
-    echo "Cached lock digest matches; checking the actual project revisions"
+    if [[ "${project_list_sha}" =~ ^[0-9a-f]{64}$ \
+        && "${cached_project_list_sha}" == "${project_list_sha}" ]]; then
+        echo "Cached lock and project inventory digests match; checking actual revisions"
+    else
+        echo "Project inventory changed or is unstamped; resynchronizing all sources"
+        full_sync=true
+    fi
 elif [[ -s "${comparison_lock}" ]]; then
     mapfile -t changed_projects \
         < <(python3 "${repo_root}/scripts/lock-delta.py" "${comparison_lock}" "${lock_file}")
@@ -380,6 +388,12 @@ if [[ "${full_sync}" == true ]]; then
     echo "Restoring the complete locked source tree from the /yocto object cache"
     source_sync_mode="full"
     sync_locked_sources
+    mapfile -t full_sync_projects \
+        < <(sed -e '/^[[:space:]]*$/d' "${android_dir}/.repo/project.list")
+    (( ${#full_sync_projects[@]} > 0 )) \
+        || die "Full source restore produced an empty project inventory"
+    echo "Removing disposable residue from the fully restored source tree"
+    clean_project_residue "${full_sync_projects[@]}"
 elif (( ${#changed_projects[@]} > 0 )); then
     echo "Synchronizing ${#changed_projects[@]} project(s) changed by the immutable lock"
     source_sync_mode="delta"
@@ -395,6 +409,7 @@ remaining_drift="$(python3 "${repo_root}/scripts/worktree-lock-drift.py" \
 [[ -z "${remaining_drift}" ]] \
     || die "Checked-out source still differs from the immutable lock after repo sync: ${remaining_drift}"
 printf '%s\n' "${lock_sha}" > .repo/aesl-source-lock.sha256
+sha256sum .repo/project.list | awk '{print $1}' > .repo/aesl-project-list.sha256
 install -m 0644 "${lock_file}" "${previous_lock}"
 
 if [[ "${arm64_build_variant}" == user ]]; then
