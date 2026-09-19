@@ -13,6 +13,7 @@ GIT_ENV_KEYS = (
     "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
     "GIT_ALTERNATE_OBJECT_DIRECTORIES",
 )
+AUTHORIZED_RUNNER_NAME = "esl-proxmox-runner"
 
 
 def clean_git_environment() -> dict[str, str]:
@@ -21,6 +22,15 @@ def clean_git_environment() -> dict[str, str]:
         environment.pop(key, None)
     environment["GIT_NO_REPLACE_OBJECTS"] = "1"
     return environment
+
+
+def runner_cleanup_authorized() -> bool:
+    requested = os.environ.get("AESL_ALLOW_LOCKED_SOURCE_CLEANUP", "").strip().lower()
+    return (
+        requested in {"1", "true"}
+        and os.environ.get("GITHUB_ACTIONS") == "true"
+        and os.environ.get("RUNNER_NAME") == AUTHORIZED_RUNNER_NAME
+    )
 
 
 def main() -> int:
@@ -34,7 +44,9 @@ def main() -> int:
         print(f"cannot inspect Android worktree: {error}", file=sys.stderr)
         return 2
 
-    cleanup_authorized = os.environ.get("ALLOW_LOCKED_SOURCE_CLEANUP") in {"1", "true"}
+    cleanup_authorized = runner_cleanup_authorized()
+    if cleanup_authorized:
+        print(f"Authorized locked-source recovery enabled on {AUTHORIZED_RUNNER_NAME}")
 
     for path in sys.argv[2:]:
         relative = Path(path)
@@ -63,6 +75,46 @@ def main() -> int:
             print(f"cannot revalidate project path {path}: {error}", file=sys.stderr)
             return 2
         environment = clean_git_environment()
+        tracked = subprocess.run(
+            [
+                "git", "--no-replace-objects", "-C", str(project_dir), "status",
+                "--porcelain=v1", "--untracked-files=no",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=environment,
+        )
+        if tracked.returncode:
+            print(f"cannot inventory tracked source changes: {path}", file=sys.stderr)
+            return 2
+        if tracked.stdout:
+            print(f"Tracked source changes scheduled for reset in {path}:")
+            for line in tracked.stdout.splitlines():
+                print(f"  {line}")
+            if not cleanup_authorized:
+                print(
+                    "refusing cleanup outside the authorized AESL CI runner",
+                    file=sys.stderr,
+                )
+                return 2
+            try:
+                if candidate.resolve(strict=True) != project_dir:
+                    raise OSError("project path changed before tracked reset")
+            except OSError as error:
+                print(f"cannot revalidate project path {path}: {error}", file=sys.stderr)
+                return 2
+            reset = subprocess.run(
+                [
+                    "git", "--no-replace-objects", "-C", str(project_dir),
+                    "reset", "--hard", "HEAD",
+                ],
+                check=False,
+                env=environment,
+            )
+            if reset.returncode:
+                print(f"cannot reset tracked source changes: {path}", file=sys.stderr)
+                return 2
         preview = subprocess.run(
             ["git", "--no-replace-objects", "-C", str(project_dir), "clean", "-ndx"],
             capture_output=True,
@@ -79,10 +131,16 @@ def main() -> int:
                 print(f"  {line}")
             if not cleanup_authorized:
                 print(
-                    "refusing cleanup without ALLOW_LOCKED_SOURCE_CLEANUP=true",
+                    "refusing cleanup outside the authorized AESL CI runner",
                     file=sys.stderr,
                 )
                 return 2
+        try:
+            if candidate.resolve(strict=True) != project_dir:
+                raise OSError("project path changed before residue cleanup")
+        except OSError as error:
+            print(f"cannot revalidate project path {path}: {error}", file=sys.stderr)
+            return 2
         result = subprocess.run(
             ["git", "--no-replace-objects", "-C", str(project_dir), "clean", "-fdqx"],
             check=False,

@@ -25,7 +25,7 @@ def main() -> int:
     expected_workflow_lines = (
         "    timeout-minutes: 1440",
         '          JOBS: "6"',
-        '          ALLOW_LOCKED_SOURCE_CLEANUP: "true"',
+        '          AESL_ALLOW_LOCKED_SOURCE_CLEANUP: "true"',
         "          SOONG_GOMEMLIMIT: 28GiB",
         "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7",
         "      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7",

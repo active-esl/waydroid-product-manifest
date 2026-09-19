@@ -44,7 +44,10 @@ At the source-sync boundaries, the CI worktree gate verifies every selected
 project's clean tracked state, non-symlinked location beneath the Android
 worktree, and locked `HEAD`. It removes untracked and ignored residue from the
 affected locked projects before resyncing them, then repeats the verification.
-Tracked local edits remain a hard failure. This detects persistent runner
+Tracked local edits remain a hard failure for local and developer builds. On
+the dedicated CI runner, the same explicit cleanup authorization inventories
+their status, resets the affected project to its current `HEAD`, then schedules
+it for `repo sync --force-checkout -d` at the locked revision. This detects persistent runner
 source changes before the Android build starts; the immutable lock remains the
 authority for every selected project revision.
 
@@ -55,6 +58,7 @@ project trees. Before removing residue, CI prints `git clean -ndx` output with
 the owning project path to the retained build log. Nested untracked Git
 repositories are not force-deleted; they remain visible to the final drift gate
 and stop the build for manual inspection.
-Deletion also requires `ALLOW_LOCKED_SOURCE_CLEANUP=true`, which is set only on
-the dedicated Android CI build step. Local and developer invocations print the
-same inventory and fail closed unless the operator explicitly opts in.
+Deletion also requires `AESL_ALLOW_LOCKED_SOURCE_CLEANUP=true` while GitHub
+Actions identifies the runner as `esl-proxmox-runner`. The dedicated Android CI
+build step sets the switch; local and developer invocations cannot activate it
+accidentally and fail closed after printing the same inventory.

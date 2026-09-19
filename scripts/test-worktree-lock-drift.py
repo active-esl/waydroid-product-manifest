@@ -12,6 +12,11 @@ from pathlib import Path
 
 CHECKER = Path(__file__).with_name("worktree-lock-drift.py")
 CLEANER = Path(__file__).with_name("clean-worktree-residue.py")
+AUTHORIZED_ENV = {
+    "AESL_ALLOW_LOCKED_SOURCE_CLEANUP": "true",
+    "GITHUB_ACTIONS": "true",
+    "RUNNER_NAME": "esl-proxmox-runner",
+}
 
 
 def git(*args: str) -> str:
@@ -29,12 +34,31 @@ def check(lock: Path, project_list: Path, worktree: Path) -> str:
     return result.stdout.strip()
 
 
+def check_authorized(lock: Path, project_list: Path, worktree: Path) -> str:
+    result = subprocess.run(
+        ["python3", str(CHECKER), str(lock), str(project_list), str(worktree)],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, **AUTHORIZED_ENV},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Tracked source changes scheduled for locked resync" in result.stderr
+    return result.stdout.strip()
+
+
 def check_failure(lock: Path, project_list: Path, worktree: Path) -> str:
     result = subprocess.run(
         ["python3", str(CHECKER), str(lock), str(project_list), str(worktree)],
         capture_output=True,
         text=True,
         check=False,
+        env={
+            **os.environ,
+            "AESL_ALLOW_LOCKED_SOURCE_CLEANUP": "",
+            "GITHUB_ACTIONS": "false",
+            "RUNNER_NAME": "",
+        },
     )
     assert result.returncode == 2, result.stdout + result.stderr
     return result.stderr
@@ -44,7 +68,7 @@ def clean(worktree: Path, *projects: str) -> None:
     subprocess.run(
         ["python3", str(CLEANER), str(worktree), *projects],
         check=True,
-        env={**os.environ, "ALLOW_LOCKED_SOURCE_CLEANUP": "true"},
+        env={**os.environ, **AUTHORIZED_ENV},
     )
 
 
@@ -78,7 +102,10 @@ def main() -> int:
         assert "cannot resync project with tracked local changes" in check_failure(
             lock, project_list, worktree
         )
-        (project / "tracked.txt").write_text("original\n")
+        assert check_authorized(lock, project_list, worktree) == "hardware/waydroid"
+        clean(worktree, "hardware/waydroid")
+        assert (project / "tracked.txt").read_text() == "original\n"
+        assert check(lock, project_list, worktree) == ""
         (project / "untracked.txt").write_text("must not enter a locked build\n")
         assert check(lock, project_list, worktree) == "hardware/waydroid"
         (project / "ignored.txt").write_text("must not enter a locked build\n")
@@ -86,11 +113,15 @@ def main() -> int:
         refused = subprocess.run(
             ["python3", str(CLEANER), str(worktree), "hardware/waydroid"],
             capture_output=True, text=True, check=False,
-            env={key: value for key, value in os.environ.items()
-                 if key != "ALLOW_LOCKED_SOURCE_CLEANUP"},
+            env={
+                **os.environ,
+                "AESL_ALLOW_LOCKED_SOURCE_CLEANUP": "true",
+                "GITHUB_ACTIONS": "true",
+                "RUNNER_NAME": "unrelated-runner",
+            },
         )
         assert refused.returncode == 2
-        assert "refusing cleanup without ALLOW_LOCKED_SOURCE_CLEANUP=true" in refused.stderr
+        assert "refusing cleanup outside the authorized AESL CI runner" in refused.stderr
         assert (project / "untracked.txt").exists()
         assert (project / "ignored.txt").exists()
         clean(worktree, "hardware/waydroid")

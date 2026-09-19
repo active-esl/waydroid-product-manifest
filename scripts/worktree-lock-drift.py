@@ -20,6 +20,7 @@ GIT_ENV_KEYS = (
     "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
     "GIT_ALTERNATE_OBJECT_DIRECTORIES",
 )
+AUTHORIZED_RUNNER_NAME = "esl-proxmox-runner"
 
 
 def clean_git_environment() -> dict[str, str]:
@@ -28,6 +29,15 @@ def clean_git_environment() -> dict[str, str]:
         environment.pop(key, None)
     environment["GIT_NO_REPLACE_OBJECTS"] = "1"
     return environment
+
+
+def runner_cleanup_authorized() -> bool:
+    requested = os.environ.get("AESL_ALLOW_LOCKED_SOURCE_CLEANUP", "").strip().lower()
+    return (
+        requested in {"1", "true"}
+        and os.environ.get("GITHUB_ACTIONS") == "true"
+        and os.environ.get("RUNNER_NAME") == AUTHORIZED_RUNNER_NAME
+    )
 
 
 def main() -> int:
@@ -78,6 +88,12 @@ def main() -> int:
 
     drifted: list[str] = []
     environment = clean_git_environment()
+    cleanup_authorized = runner_cleanup_authorized()
+    if cleanup_authorized:
+        print(
+            f"Authorized locked-source recovery enabled on {AUTHORIZED_RUNNER_NAME}",
+            file=sys.stderr,
+        )
     for path in tracked:
         relative = Path(path)
         if relative.is_absolute() or ".." in relative.parts or path not in projects:
@@ -135,9 +151,21 @@ def main() -> int:
                 check=False,
                 env=environment,
             )
-            if tracked_status.returncode or tracked_status.stdout:
-                print(f"cannot resync project with tracked local changes: {path}", file=sys.stderr)
+            if tracked_status.returncode:
+                print(f"cannot inspect tracked source state: {path}", file=sys.stderr)
                 return 2
+            if tracked_status.stdout:
+                if not cleanup_authorized:
+                    print(
+                        f"cannot resync project with tracked local changes: {path}",
+                        file=sys.stderr,
+                    )
+                    return 2
+                print(f"Tracked source changes scheduled for locked resync in {path}:", file=sys.stderr)
+                for line in tracked_status.stdout.splitlines():
+                    print(f"  {line}", file=sys.stderr)
+                if path not in drifted:
+                    drifted.append(path)
             residue_status = subprocess.run(
                 [
                     "git", "--no-replace-objects", "-C", str(project_dir), "status",
@@ -152,7 +180,8 @@ def main() -> int:
                 print(f"cannot inspect project residue: {path}", file=sys.stderr)
                 return 2
             if residue_status.stdout:
-                drifted.append(path)
+                if path not in drifted:
+                    drifted.append(path)
         if result.returncode or result.stdout.strip() != projects[path]:
             if path not in drifted:
                 drifted.append(path)

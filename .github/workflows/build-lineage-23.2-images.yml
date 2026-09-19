@@ -81,7 +81,7 @@ jobs:
           SOONG_GOMEMLIMIT: 28GiB
           # This dedicated CI workspace may discard audited untracked source
           # residue. Developer invocations fail closed unless they opt in.
-          ALLOW_LOCKED_SOURCE_CLEANUP: "true"
+          AESL_ALLOW_LOCKED_SOURCE_CLEANUP: "true"
           ARM64_BUILD_VARIANT: ${{ inputs.arm64_variant }}
           BUILD_SCOPE: ${{ inputs.build_scope }}
         run: scripts/build-images.sh
