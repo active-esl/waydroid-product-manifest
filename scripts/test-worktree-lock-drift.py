@@ -65,19 +65,15 @@ def main() -> int:
 
         assert check(lock, project_list, worktree) == ""
         (project / "tracked.txt").write_text("local edit at locked head\n")
-        assert "cannot resync project with local changes" in check_failure(
+        assert "cannot resync project with tracked local changes" in check_failure(
             lock, project_list, worktree
         )
         (project / "tracked.txt").write_text("original\n")
         (project / "untracked.txt").write_text("must not enter a locked build\n")
-        assert "cannot resync project with local changes" in check_failure(
-            lock, project_list, worktree
-        )
+        assert check(lock, project_list, worktree) == "hardware/waydroid"
         (project / "untracked.txt").unlink()
         (project / "ignored.txt").write_text("must not enter a locked build\n")
-        assert "cannot resync project with local changes" in check_failure(
-            lock, project_list, worktree
-        )
+        assert check(lock, project_list, worktree) == "hardware/waydroid"
         (project / "ignored.txt").unlink()
 
         (project / "tracked.txt").write_text("replacement content\n")
@@ -96,7 +92,7 @@ def main() -> int:
             "commit", "-q", "--allow-empty", "-m", "drifted")
         assert check(lock, project_list, worktree) == "hardware/waydroid"
         (project / "tracked.txt").write_text("local edit\n")
-        assert "cannot resync project with local changes" in check_failure(
+        assert "cannot resync project with tracked local changes" in check_failure(
             lock, project_list, worktree
         )
         (project / "tracked.txt").write_text("original\n")

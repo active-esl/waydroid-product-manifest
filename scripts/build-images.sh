@@ -238,6 +238,17 @@ sync_locked_sources() {
     done
 }
 
+clean_project_residue() {
+    local project project_dir
+    for project in "$@"; do
+        project_dir="${android_dir}/${project}"
+        [[ -e "${project_dir}/.git" ]] \
+            || die "Cannot clean non-Git project selected by the source lock: ${project}"
+        git --no-replace-objects -C "${project_dir}" clean -ffdqx \
+            || die "Cannot remove untracked source residue: ${project}"
+    done
+}
+
 for command in repo git python3 sha256sum timeout ps blkid dumpe2fs e2fsck; do
     command -v "${command}" >/dev/null || die "required command missing: ${command}"
 done
@@ -321,6 +332,7 @@ if [[ ! -s "${comparison_lock}" \
 fi
 full_sync=false
 declare -a changed_projects=()
+declare -a residue_projects=()
 if [[ "${force_full_sync}" == true || "${force_full_sync}" == 1 ]]; then
     echo "A complete source resynchronization was explicitly requested"
     full_sync=true
@@ -339,23 +351,34 @@ fi
 
 # A manifest digest proves only which revisions were requested. The persistent
 # worktree may have been changed independently, even when the digest matches.
-# Also include drift in projects unchanged by a newly selected lock.
-if [[ "${full_sync}" != true ]]; then
-    drift_output="$(python3 "${repo_root}/scripts/worktree-lock-drift.py" \
-        "${lock_file}" "${android_dir}/.repo/project.list" "${android_dir}")" \
-        || die "Cannot verify checked-out source revisions against the immutable lock"
-    if [[ "${drift_output}" == __FULL__ ]]; then
+# Inspect it before every sync, including an explicitly requested full restore.
+drift_output="$(python3 "${repo_root}/scripts/worktree-lock-drift.py" \
+    "${lock_file}" "${android_dir}/.repo/project.list" "${android_dir}")" \
+    || die "Cannot verify checked-out source revisions against the immutable lock"
+if [[ "${drift_output}" == __FULL__ ]]; then
+    if [[ "${full_sync}" != true ]]; then
         echo "Project inventory is stale; resynchronizing all sources"
         full_sync=true
         changed_projects=()
-    elif [[ -n "${drift_output}" ]]; then
-        while IFS= read -r drifted_project; do
-            [[ -n "${drifted_project}" ]] && changed_projects+=("${drifted_project}")
-        done <<< "${drift_output}"
+    fi
+elif [[ -n "${drift_output}" ]]; then
+    while IFS= read -r drifted_project; do
+        [[ -n "${drifted_project}" ]] && residue_projects+=("${drifted_project}")
+        if [[ "${full_sync}" != true && -n "${drifted_project}" ]]; then
+            changed_projects+=("${drifted_project}")
+        fi
+    done <<< "${drift_output}"
+    mapfile -t residue_projects < <(printf '%s\n' "${residue_projects[@]}" | sort -u)
+    if [[ "${full_sync}" != true ]]; then
         mapfile -t changed_projects < <(printf '%s\n' "${changed_projects[@]}" | sort -u)
         echo "Synchronizing ${#changed_projects[@]} project(s) to their immutable revisions"
         printf '  %s\n' "${changed_projects[@]}"
     fi
+fi
+
+if (( ${#residue_projects[@]} > 0 )); then
+    echo "Removing untracked or ignored residue from ${#residue_projects[@]} locked project(s)"
+    clean_project_residue "${residue_projects[@]}"
 fi
 
 if [[ "${full_sync}" == true ]]; then

@@ -38,7 +38,10 @@ git diff --stat 9f94eaf967934193724223206f7b421d06f4d891 b92200ac592ed43acd9f1f1
 git diff 9f94eaf967934193724223206f7b421d06f4d891 b92200ac592ed43acd9f1f1bc41c09bc407b1732 -- hwcomposer
 ```
 
-The CI worktree gate verifies every selected project's clean tracked and
-untracked state, non-symlinked location beneath the Android worktree, and
-locked `HEAD` both before and after source synchronization. This prevents a
-persistent runner modification from silently replacing this reviewed delta.
+At the source-sync boundaries, the CI worktree gate verifies every selected
+project's clean tracked state, non-symlinked location beneath the Android
+worktree, and locked `HEAD`. It removes untracked and ignored residue from the
+affected locked projects before resyncing them, then repeats the verification.
+Tracked local edits remain a hard failure. This detects persistent runner
+source changes before the Android build starts; the immutable lock remains the
+authority for every selected project revision.

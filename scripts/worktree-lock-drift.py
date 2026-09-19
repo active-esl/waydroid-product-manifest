@@ -39,7 +39,13 @@ def main() -> int:
         print(f"cannot inspect source lock: {error}", file=sys.stderr)
         return 2
 
-    tracked = [line.strip() for line in project_list.read_text().splitlines() if line.strip()]
+    try:
+        tracked = [
+            line.strip() for line in project_list.read_text().splitlines() if line.strip()
+        ]
+    except OSError as error:
+        print(f"cannot inspect project inventory: {error}", file=sys.stderr)
+        return 2
     if not tracked:
         print("__FULL__")
         return 0
@@ -87,7 +93,19 @@ def main() -> int:
             check=False,
         )
         if not result.returncode:
-            status = subprocess.run(
+            tracked_status = subprocess.run(
+                [
+                    "git", "--no-replace-objects", "-C", str(project_dir), "status",
+                    "--porcelain=v1", "--untracked-files=no",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if tracked_status.returncode or tracked_status.stdout:
+                print(f"cannot resync project with tracked local changes: {path}", file=sys.stderr)
+                return 2
+            residue_status = subprocess.run(
                 [
                     "git", "--no-replace-objects", "-C", str(project_dir), "status",
                     "--porcelain=v1", "--untracked-files=all", "--ignored=matching",
@@ -96,11 +114,14 @@ def main() -> int:
                 text=True,
                 check=False,
             )
-            if status.returncode or status.stdout:
-                print(f"cannot resync project with local changes: {path}", file=sys.stderr)
+            if residue_status.returncode:
+                print(f"cannot inspect project residue: {path}", file=sys.stderr)
                 return 2
+            if residue_status.stdout:
+                drifted.append(path)
         if result.returncode or result.stdout.strip() != projects[path]:
-            drifted.append(path)
+            if path not in drifted:
+                drifted.append(path)
 
     print("\n".join(drifted), end="\n" if drifted else "")
     return 0
