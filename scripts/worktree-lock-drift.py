@@ -50,17 +50,20 @@ def main() -> int:
             text=True,
             check=False,
         )
+        if not result.returncode:
+            status = subprocess.run(
+                [
+                    "git", "-C", str(worktree / relative), "status",
+                    "--porcelain=v1", "--untracked-files=no",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if status.returncode or status.stdout:
+                print(f"cannot resync project with local changes: {path}", file=sys.stderr)
+                return 2
         if result.returncode or result.stdout.strip() != projects[path]:
-            if not result.returncode:
-                status = subprocess.run(
-                    ["git", "-C", str(worktree / relative), "status", "--porcelain=v1"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                if status.returncode or status.stdout:
-                    print(f"cannot resync drifted project with local changes: {path}", file=sys.stderr)
-                    return 2
             drifted.append(path)
 
     print("\n".join(drifted), end="\n" if drifted else "")

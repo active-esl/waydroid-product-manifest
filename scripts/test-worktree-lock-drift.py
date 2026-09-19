@@ -62,11 +62,16 @@ def main() -> int:
         project_list.write_text("hardware/waydroid\n")
 
         assert check(lock, project_list, worktree) == ""
+        (project / "tracked.txt").write_text("local edit at locked head\n")
+        assert "cannot resync project with local changes" in check_failure(
+            lock, project_list, worktree
+        )
+        (project / "tracked.txt").write_text("original\n")
         git("-C", str(project), "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
             "commit", "-q", "--allow-empty", "-m", "drifted")
         assert check(lock, project_list, worktree) == "hardware/waydroid"
         (project / "tracked.txt").write_text("local edit\n")
-        assert "cannot resync drifted project with local changes" in check_failure(
+        assert "cannot resync project with local changes" in check_failure(
             lock, project_list, worktree
         )
         (project / "tracked.txt").write_text("original\n")
