@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Replacement refs can silently substitute different source contents for a
+# locked commit. Disable them for every git and repo operation in this build.
+export GIT_NO_REPLACE_OBJECTS=1
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 android_dir="${ANDROID_WORKSPACE:-/yocto/android-16-source}"
 x86_64_out_dir="${ANDROID_X86_64_OUT_DIR:-${android_dir}/out-x86_64}"
@@ -161,7 +165,8 @@ run_repo_sync() {
     if [[ "${1:-}" != --network-only ]]; then
         sync_options+=(--force-checkout -d)
     fi
-    setsid env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
+    setsid env GIT_NO_REPLACE_OBJECTS=1 \
+        GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
         repo sync "${sync_options[@]}" "$@" &
     sync_pid=$!
     trap 'kill -TERM -- "-${sync_pid}" 2>/dev/null || true' INT TERM
@@ -234,6 +239,11 @@ sync_locked_sources() {
     done
 }
 
+clean_project_residue() {
+    python3 "${repo_root}/scripts/clean-worktree-residue.py" "${android_dir}" "$@" \
+        || die "Cannot remove untracked residue from locked source projects"
+}
+
 for command in repo git python3 sha256sum timeout ps blkid dumpe2fs e2fsck; do
     command -v "${command}" >/dev/null || die "required command missing: ${command}"
 done
@@ -294,6 +304,8 @@ manifest_url="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).
 cd "${android_dir}"
 
 cached_lock="$(cat .repo/aesl-source-lock.sha256 2>/dev/null || true)"
+cached_project_list_sha="$(cat .repo/aesl-project-list.sha256 2>/dev/null || true)"
+project_list_sha="$(sha256sum .repo/project.list 2>/dev/null | awk '{print $1}' || true)"
 cached_manifest_url="$(git --git-dir=.repo/manifests.git config --get remote.origin.url 2>/dev/null || true)"
 if [[ "${cached_lock}" == "${lock_sha}" && "${cached_manifest_url}" == "${manifest_url}" ]]; then
     repo_init_mode=reused
@@ -316,12 +328,19 @@ if [[ ! -s "${comparison_lock}" \
     echo "Recovering the previous immutable lock from the /yocto manifest cache"
 fi
 full_sync=false
-changed_projects=()
+declare -a changed_projects=()
+declare -a residue_projects=()
 if [[ "${force_full_sync}" == true || "${force_full_sync}" == 1 ]]; then
     echo "A complete source resynchronization was explicitly requested"
     full_sync=true
 elif [[ "${cached_lock}" == "${lock_sha}" ]]; then
-    echo "Source worktree already matches the immutable lock; skipping repo sync"
+    if [[ "${project_list_sha}" =~ ^[0-9a-f]{64}$ \
+        && "${cached_project_list_sha}" == "${project_list_sha}" ]]; then
+        echo "Cached lock and project inventory digests match; checking actual revisions"
+    else
+        echo "Project inventory changed or is unstamped; resynchronizing all sources"
+        full_sync=true
+    fi
 elif [[ -s "${comparison_lock}" ]]; then
     mapfile -t changed_projects \
         < <(python3 "${repo_root}/scripts/lock-delta.py" "${comparison_lock}" "${lock_file}")
@@ -333,10 +352,53 @@ else
     full_sync=true
 fi
 
+# A manifest digest proves only which revisions were requested. The persistent
+# worktree may have been changed independently, even when the digest matches.
+# Inspect it before every sync, including an explicitly requested full restore.
+drift_output="$(python3 "${repo_root}/scripts/worktree-lock-drift.py" \
+    "${lock_file}" "${android_dir}/.repo/project.list" "${android_dir}")" \
+    || die "Cannot verify checked-out source revisions against the immutable lock"
+if [[ "${drift_output}" == __FULL__ ]]; then
+    if [[ "${full_sync}" != true ]]; then
+        echo "Project inventory is stale; resynchronizing all sources"
+        full_sync=true
+        changed_projects=()
+    fi
+elif [[ -n "${drift_output}" ]]; then
+    while IFS= read -r drifted_project; do
+        [[ -n "${drifted_project}" ]] && residue_projects+=("${drifted_project}")
+        if [[ "${full_sync}" != true && -n "${drifted_project}" ]]; then
+            changed_projects+=("${drifted_project}")
+        fi
+    done <<< "${drift_output}"
+    mapfile -t residue_projects < <(printf '%s\n' "${residue_projects[@]}" | sort -u)
+    if [[ "${full_sync}" != true ]]; then
+        mapfile -t changed_projects < <(printf '%s\n' "${changed_projects[@]}" | sort -u)
+        echo "Synchronizing ${#changed_projects[@]} project(s) to their immutable revisions"
+        printf '  %s\n' "${changed_projects[@]}"
+    fi
+fi
+
+if (( ${#residue_projects[@]} > 0 )); then
+    echo "Removing untracked or ignored residue from ${#residue_projects[@]} locked project(s)"
+    clean_project_residue "${residue_projects[@]}"
+fi
+
 if [[ "${full_sync}" == true ]]; then
     echo "Restoring the complete locked source tree from the /yocto object cache"
     source_sync_mode="full"
     sync_locked_sources
+    full_sync_drift="$(python3 "${repo_root}/scripts/worktree-lock-drift.py" \
+        "${lock_file}" "${android_dir}/.repo/project.list" "${android_dir}")" \
+        || die "Cannot validate the fully restored project inventory"
+    [[ "${full_sync_drift}" != __FULL__ ]] \
+        || die "Full source restore produced an inventory outside the immutable lock"
+    mapfile -t full_sync_projects \
+        < <(sed -e '/^[[:space:]]*$/d' "${android_dir}/.repo/project.list")
+    (( ${#full_sync_projects[@]} > 0 )) \
+        || die "Full source restore produced an empty project inventory"
+    echo "Removing disposable residue from the fully restored source tree"
+    clean_project_residue "${full_sync_projects[@]}"
 elif (( ${#changed_projects[@]} > 0 )); then
     echo "Synchronizing ${#changed_projects[@]} project(s) changed by the immutable lock"
     source_sync_mode="delta"
@@ -346,7 +408,13 @@ else
     echo "No project revisions changed; preserving the incremental source worktree"
     source_sync_mode="reused"
 fi
+remaining_drift="$(python3 "${repo_root}/scripts/worktree-lock-drift.py" \
+    "${lock_file}" "${android_dir}/.repo/project.list" "${android_dir}")" \
+    || die "Cannot verify source revisions after repo sync"
+[[ -z "${remaining_drift}" ]] \
+    || die "Checked-out source still differs from the immutable lock after repo sync: ${remaining_drift}"
 printf '%s\n' "${lock_sha}" > .repo/aesl-source-lock.sha256
+sha256sum .repo/project.list | awk '{print $1}' > .repo/aesl-project-list.sha256
 install -m 0644 "${lock_file}" "${previous_lock}"
 
 if [[ "${arm64_build_variant}" == user ]]; then

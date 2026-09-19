@@ -48,6 +48,8 @@ jobs:
         run: |
           python3 scripts/test-validate-lock.py
           python3 scripts/test-lock-delta.py
+      - name: Regression-test checked-out source lock gate
+        run: python3 scripts/test-worktree-lock-drift.py
       - name: Regression-test Android CI resource policy
         run: python3 scripts/test-build-resource-policy.py
       - name: Install pinned Android repo launcher
@@ -77,6 +79,9 @@ jobs:
           # I/O pressure by asking Ninja for more parallelism than the quota.
           JOBS: "6"
           SOONG_GOMEMLIMIT: 28GiB
+          # This dedicated CI workspace may discard audited untracked source
+          # residue. Developer invocations fail closed unless they opt in.
+          ALLOW_LOCKED_SOURCE_CLEANUP: "true"
           ARM64_BUILD_VARIANT: ${{ inputs.arm64_variant }}
           BUILD_SCOPE: ${{ inputs.build_scope }}
         run: scripts/build-images.sh

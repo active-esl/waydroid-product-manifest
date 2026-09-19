@@ -25,6 +25,7 @@ def main() -> int:
     expected_workflow_lines = (
         "    timeout-minutes: 1440",
         '          JOBS: "6"',
+        '          ALLOW_LOCKED_SOURCE_CLEANUP: "true"',
         "          SOONG_GOMEMLIMIT: 28GiB",
         "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7",
         "      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7",
@@ -82,6 +83,16 @@ def main() -> int:
     assert 'board_profile=imx8mm' in build_script
     assert 'board_profile=imx95_frdm' in build_script
     assert '"AESL_WAYDROID_BOARD_PROFILE = \\"${board_profile}\\""' in build_script
+    for source_integrity_gate in (
+        'cached_project_list_sha="$(cat .repo/aesl-project-list.sha256',
+        '"${cached_project_list_sha}" == "${project_list_sha}"',
+        'clean_project_residue "${full_sync_projects[@]}"',
+        'sha256sum .repo/project.list',
+        'remaining_drift="$(python3 "${repo_root}/scripts/worktree-lock-drift.py"',
+    ):
+        assert source_integrity_gate in build_script, (
+            f"missing persistent-worktree integrity gate: {source_integrity_gate}"
+        )
     for image_gate in (
         'validate_raw_android_image "${target_artifacts}/system.img"',
         'validate_raw_android_image "${target_artifacts}/vendor.img"',
