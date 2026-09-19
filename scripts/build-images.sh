@@ -321,7 +321,7 @@ if [[ "${force_full_sync}" == true || "${force_full_sync}" == 1 ]]; then
     echo "A complete source resynchronization was explicitly requested"
     full_sync=true
 elif [[ "${cached_lock}" == "${lock_sha}" ]]; then
-    echo "Source worktree already matches the immutable lock; skipping repo sync"
+    echo "Cached lock digest matches; checking the actual project revisions"
 elif [[ -s "${comparison_lock}" ]]; then
     mapfile -t changed_projects \
         < <(python3 "${repo_root}/scripts/lock-delta.py" "${comparison_lock}" "${lock_file}")
@@ -331,6 +331,27 @@ elif [[ -s "${comparison_lock}" ]]; then
     fi
 else
     full_sync=true
+fi
+
+# A manifest digest proves only which revisions were requested. The persistent
+# worktree may have been changed independently, even when the digest matches.
+# Also include drift in projects unchanged by a newly selected lock.
+if [[ "${full_sync}" != true ]]; then
+    drift_output="$(python3 "${repo_root}/scripts/worktree-lock-drift.py" \
+        "${lock_file}" "${android_dir}/.repo/project.list" "${android_dir}")" \
+        || die "Cannot verify checked-out source revisions against the immutable lock"
+    if [[ "${drift_output}" == __FULL__ ]]; then
+        echo "Project inventory is stale; resynchronizing all sources"
+        full_sync=true
+        changed_projects=()
+    elif [[ -n "${drift_output}" ]]; then
+        while IFS= read -r drifted_project; do
+            [[ -n "${drifted_project}" ]] && changed_projects+=("${drifted_project}")
+        done <<< "${drift_output}"
+        mapfile -t changed_projects < <(printf '%s\n' "${changed_projects[@]}" | sort -u)
+        echo "Synchronizing ${#changed_projects[@]} project(s) to their immutable revisions"
+        printf '  %s\n' "${changed_projects[@]}"
+    fi
 fi
 
 if [[ "${full_sync}" == true ]]; then
@@ -346,6 +367,11 @@ else
     echo "No project revisions changed; preserving the incremental source worktree"
     source_sync_mode="reused"
 fi
+remaining_drift="$(python3 "${repo_root}/scripts/worktree-lock-drift.py" \
+    "${lock_file}" "${android_dir}/.repo/project.list" "${android_dir}")" \
+    || die "Cannot verify source revisions after repo sync"
+[[ -z "${remaining_drift}" ]] \
+    || die "Checked-out source still differs from the immutable lock after repo sync: ${remaining_drift}"
 printf '%s\n' "${lock_sha}" > .repo/aesl-source-lock.sha256
 install -m 0644 "${lock_file}" "${previous_lock}"
 
