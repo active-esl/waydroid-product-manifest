@@ -48,6 +48,7 @@ jobs:
         run: |
           python3 scripts/test-validate-lock.py
           python3 scripts/test-lock-delta.py
+          python3 scripts/test-patch-state.py
       - name: Regression-test checked-out source lock gate
         run: python3 scripts/test-worktree-lock-drift.py
       - name: Regression-test Android CI resource policy

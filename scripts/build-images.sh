@@ -426,11 +426,13 @@ else
 fi
 echo "Applying the pinned Waydroid patch series"
 patch_root="${android_dir}/vendor/extra/waydroid-patches/base-patches-36"
+patch_requirements="${repo_root}/locks/lineage-23.2-required-revisions.tsv"
 patch_state_dir="${android_dir}/.repo/aesl-patch-state"
 patch_projects_file="${android_dir}/.repo/aesl-patch-projects"
 mkdir -p "${patch_state_dir}"
 mapfile -t patch_states \
-    < <(python3 "${repo_root}/scripts/patch-state.py" "${lock_file}" "${patch_root}")
+    < <(python3 "${repo_root}/scripts/patch-state.py" \
+        "${lock_file}" "${patch_root}" "${patch_requirements}")
 declare -A desired_patch_projects=()
 declare -A synchronized_projects=()
 patch_projects_to_apply=()

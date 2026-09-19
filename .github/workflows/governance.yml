@@ -23,7 +23,9 @@ jobs:
         run: python3 -m compileall -q scripts
 
       - name: Test immutable source-lock validation
-        run: python3 scripts/test-validate-lock.py
+        run: |
+          python3 scripts/test-validate-lock.py
+          python3 scripts/test-patch-state.py
 
       - name: Test Android CI and attestation policy
         run: python3 scripts/test-build-resource-policy.py

@@ -9,17 +9,55 @@ import sys
 import xml.etree.ElementTree as ET
 
 
+def validate_required_revisions(
+    requirements: pathlib.Path, revisions: dict[str, str]
+) -> None:
+    if not requirements.is_file():
+        raise ValueError(f"required revisions file is missing: {requirements}")
+    for line_number, raw_line in enumerate(requirements.read_text().splitlines(), 1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        fields = line.split("\t")
+        if len(fields) != 2 or not all(fields):
+            raise ValueError(
+                f"invalid required revision at {requirements}:{line_number}"
+            )
+        project, required_revision = fields
+        locked_revision = revisions.get(project)
+        if locked_revision is None:
+            raise ValueError(f"required patch dependency is absent from source lock: {project}")
+        if locked_revision != required_revision:
+            raise ValueError(
+                "required patch dependency revision mismatch: "
+                f"{project} is {locked_revision}, expected {required_revision}"
+            )
+
+
 def main() -> int:
-    if len(sys.argv) != 3:
-        print("usage: patch-state.py SOURCE_LOCK PATCH_ROOT", file=sys.stderr)
+    if len(sys.argv) not in (3, 4):
+        print(
+            "usage: patch-state.py SOURCE_LOCK PATCH_ROOT [REQUIRED_REVISIONS]",
+            file=sys.stderr,
+        )
         return 2
 
     lock_path = pathlib.Path(sys.argv[1])
     patch_root = pathlib.Path(sys.argv[2])
-    revisions = {
-        (project.get("path") or project.get("name")): project.get("revision", "")
-        for project in ET.parse(lock_path).getroot().findall("project")
-    }
+    requirements = (
+        pathlib.Path(sys.argv[3])
+        if len(sys.argv) == 4
+        else pathlib.Path(__file__).resolve().parent.parent
+        / "locks"
+        / "lineage-23.2-required-revisions.tsv"
+    )
+    revisions: dict[str, str] = {}
+    for project in ET.parse(lock_path).getroot().findall("project"):
+        path = project.get("path") or project.get("name")
+        if path in revisions:
+            raise ValueError(f"duplicate project path in source lock: {path}")
+        revisions[path] = project.get("revision", "")
+    validate_required_revisions(requirements, revisions)
     grouped: dict[str, list[pathlib.Path]] = {}
     for patch in sorted(patch_root.rglob("*.patch")):
         project = patch.parent.relative_to(patch_root).as_posix()
