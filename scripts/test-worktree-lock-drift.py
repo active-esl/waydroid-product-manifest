@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -98,6 +99,45 @@ def main() -> int:
         project_list.write_text("hardware/waydroid\n")
 
         assert check(lock, project_list, worktree) == ""
+
+        nested = project / "init dir"
+        nested.mkdir()
+        git("-C", str(nested), "init", "-q")
+        git("-C", str(nested), "config", "commit.gpgsign", "false")
+        (nested / "nested.txt").write_text("separately locked child project\n")
+        git("-C", str(nested), "add", "nested.txt")
+        git("-C", str(nested), "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+            "commit", "-q", "-m", "nested locked project")
+        nested_head = git("-C", str(nested), "rev-parse", "HEAD")
+        nested_manifest = ET.SubElement(
+            manifest, "project", name="waydroid/android_vendor_waydroid_init",
+            path="hardware/waydroid/init dir", revision=nested_head,
+        )
+        ET.ElementTree(manifest).write(lock, encoding="utf-8", xml_declaration=True)
+        project_list.write_text("hardware/waydroid\nhardware/waydroid/init dir/\n")
+        try:
+            assert check(lock, project_list, worktree) == ""
+            (project / "tracked.txt").write_text("parent tracked drift\n")
+            assert "cannot resync project with tracked local changes" in check_failure(
+                lock, project_list, worktree
+            )
+            (project / "tracked.txt").write_text("original\n")
+            (nested / "nested.txt").write_text("child tracked drift\n")
+            assert "cannot resync project with tracked local changes" in check_failure(
+                lock, project_list, worktree
+            )
+            git("-C", str(nested), "add", "nested.txt")
+            assert "cannot resync project with tracked local changes" in check_failure(
+                lock, project_list, worktree
+            )
+            git("-C", str(nested), "reset", "-q", "--hard", nested_head)
+            assert check(lock, project_list, worktree) == ""
+        finally:
+            shutil.rmtree(nested, ignore_errors=True)
+            manifest.remove(nested_manifest)
+            ET.ElementTree(manifest).write(lock, encoding="utf-8", xml_declaration=True)
+            project_list.write_text("hardware/waydroid\n")
+
         (project / "tracked.txt").write_text("local edit at locked head\n")
         assert "cannot resync project with tracked local changes" in check_failure(
             lock, project_list, worktree
