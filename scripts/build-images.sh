@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Replacement refs can silently substitute different source contents for a
+# locked commit. Disable them for every git and repo operation in this build.
+export GIT_NO_REPLACE_OBJECTS=1
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 android_dir="${ANDROID_WORKSPACE:-/yocto/android-16-source}"
 x86_64_out_dir="${ANDROID_X86_64_OUT_DIR:-${android_dir}/out-x86_64}"

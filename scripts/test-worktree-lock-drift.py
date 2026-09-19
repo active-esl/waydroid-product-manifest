@@ -44,8 +44,10 @@ def main() -> int:
         project = worktree / "hardware" / "waydroid"
         project.mkdir(parents=True)
         git("-C", str(project), "init", "-q")
+        git("-C", str(project), "config", "commit.gpgsign", "false")
         (project / "tracked.txt").write_text("original\n")
-        git("-C", str(project), "add", "tracked.txt")
+        (project / ".gitignore").write_text("ignored.txt\n")
+        git("-C", str(project), "add", "tracked.txt", ".gitignore")
         git("-C", str(project), "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
             "commit", "-q", "--allow-empty", "-m", "locked")
         locked_head = git("-C", str(project), "rev-parse", "HEAD")
@@ -72,6 +74,24 @@ def main() -> int:
             lock, project_list, worktree
         )
         (project / "untracked.txt").unlink()
+        (project / "ignored.txt").write_text("must not enter a locked build\n")
+        assert "cannot resync project with local changes" in check_failure(
+            lock, project_list, worktree
+        )
+        (project / "ignored.txt").unlink()
+
+        (project / "tracked.txt").write_text("replacement content\n")
+        git("-C", str(project), "add", "tracked.txt")
+        git("-C", str(project), "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+            "commit", "-q", "-m", "replacement")
+        replacement_head = git("-C", str(project), "rev-parse", "HEAD")
+        git("-C", str(project), "reset", "-q", "--hard", locked_head)
+        git("-C", str(project), "replace", locked_head, replacement_head)
+        assert "replacement refs are not allowed" in check_failure(
+            lock, project_list, worktree
+        )
+        git("-C", str(project), "replace", "-d", locked_head)
+
         git("-C", str(project), "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
             "commit", "-q", "--allow-empty", "-m", "drifted")
         assert check(lock, project_list, worktree) == "hardware/waydroid"

@@ -67,8 +67,21 @@ def main() -> int:
         if project_dir != candidate or not beneath_worktree:
             print(f"refusing symlinked or escaped project path: {path}", file=sys.stderr)
             return 2
+        replacement_refs = subprocess.run(
+            [
+                "git", "--no-replace-objects", "-C", str(project_dir),
+                "for-each-ref", "--format=%(refname)", "refs/replace",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if replacement_refs.returncode or replacement_refs.stdout:
+            print(f"replacement refs are not allowed in a locked build: {path}", file=sys.stderr)
+            return 2
         result = subprocess.run(
-            ["git", "-C", str(project_dir), "rev-parse", "--verify", "HEAD"],
+            ["git", "--no-replace-objects", "-C", str(project_dir),
+             "rev-parse", "--verify", "HEAD"],
             capture_output=True,
             text=True,
             check=False,
@@ -76,8 +89,8 @@ def main() -> int:
         if not result.returncode:
             status = subprocess.run(
                 [
-                    "git", "-C", str(project_dir), "status",
-                    "--porcelain=v1", "--untracked-files=all",
+                    "git", "--no-replace-objects", "-C", str(project_dir), "status",
+                    "--porcelain=v1", "--untracked-files=all", "--ignored=matching",
                 ],
                 capture_output=True,
                 text=True,
