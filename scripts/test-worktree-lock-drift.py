@@ -103,7 +103,9 @@ def main() -> int:
             lock, project_list, worktree
         )
         assert check_authorized(lock, project_list, worktree) == "hardware/waydroid"
-        (project / "tracked.txt").write_text("original\n")
+        clean(worktree, "hardware/waydroid")
+        assert (project / "tracked.txt").read_text() == "original\n"
+        assert check(lock, project_list, worktree) == ""
         (project / "untracked.txt").write_text("must not enter a locked build\n")
         assert check(lock, project_list, worktree) == "hardware/waydroid"
         (project / "ignored.txt").write_text("must not enter a locked build\n")
@@ -114,8 +116,8 @@ def main() -> int:
             env={
                 **os.environ,
                 "AESL_ALLOW_LOCKED_SOURCE_CLEANUP": "true",
-                "GITHUB_ACTIONS": "false",
-                "RUNNER_NAME": "",
+                "GITHUB_ACTIONS": "true",
+                "RUNNER_NAME": "unrelated-runner",
             },
         )
         assert refused.returncode == 2

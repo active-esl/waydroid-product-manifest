@@ -46,8 +46,8 @@ worktree, and locked `HEAD`. It removes untracked and ignored residue from the
 affected locked projects before resyncing them, then repeats the verification.
 Tracked local edits remain a hard failure for local and developer builds. On
 the dedicated CI runner, the same explicit cleanup authorization inventories
-their status and schedules the affected projects for `repo sync
---force-checkout -d` at the locked revisions. This detects persistent runner
+their status, resets the affected project to its current `HEAD`, then schedules
+it for `repo sync --force-checkout -d` at the locked revision. This detects persistent runner
 source changes before the Android build starts; the immutable lock remains the
 authority for every selected project revision.
 

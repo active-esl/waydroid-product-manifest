@@ -75,6 +75,46 @@ def main() -> int:
             print(f"cannot revalidate project path {path}: {error}", file=sys.stderr)
             return 2
         environment = clean_git_environment()
+        tracked = subprocess.run(
+            [
+                "git", "--no-replace-objects", "-C", str(project_dir), "status",
+                "--porcelain=v1", "--untracked-files=no",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=environment,
+        )
+        if tracked.returncode:
+            print(f"cannot inventory tracked source changes: {path}", file=sys.stderr)
+            return 2
+        if tracked.stdout:
+            print(f"Tracked source changes scheduled for reset in {path}:")
+            for line in tracked.stdout.splitlines():
+                print(f"  {line}")
+            if not cleanup_authorized:
+                print(
+                    "refusing cleanup outside the authorized AESL CI runner",
+                    file=sys.stderr,
+                )
+                return 2
+            try:
+                if candidate.resolve(strict=True) != project_dir:
+                    raise OSError("project path changed before tracked reset")
+            except OSError as error:
+                print(f"cannot revalidate project path {path}: {error}", file=sys.stderr)
+                return 2
+            reset = subprocess.run(
+                [
+                    "git", "--no-replace-objects", "-C", str(project_dir),
+                    "reset", "--hard", "HEAD",
+                ],
+                check=False,
+                env=environment,
+            )
+            if reset.returncode:
+                print(f"cannot reset tracked source changes: {path}", file=sys.stderr)
+                return 2
         preview = subprocess.run(
             ["git", "--no-replace-objects", "-C", str(project_dir), "clean", "-ndx"],
             capture_output=True,
@@ -95,6 +135,12 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 return 2
+        try:
+            if candidate.resolve(strict=True) != project_dir:
+                raise OSError("project path changed before residue cleanup")
+        except OSError as error:
+            print(f"cannot revalidate project path {path}: {error}", file=sys.stderr)
+            return 2
         result = subprocess.run(
             ["git", "--no-replace-objects", "-C", str(project_dir), "clean", "-fdqx"],
             check=False,
