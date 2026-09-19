@@ -25,6 +25,12 @@ def main() -> int:
         return 0
 
     try:
+        worktree = worktree.resolve(strict=True)
+    except OSError as error:
+        print(f"cannot inspect Android worktree: {error}", file=sys.stderr)
+        return 2
+
+    try:
         projects = {
             project.get("path", project.attrib["name"]): project.attrib["revision"]
             for project in ET.parse(lock).getroot().findall("project")
@@ -44,8 +50,25 @@ def main() -> int:
         if relative.is_absolute() or ".." in relative.parts or path not in projects:
             print("__FULL__")
             return 0
+        candidate = worktree / relative
+        try:
+            project_dir = candidate.resolve(strict=True)
+        except FileNotFoundError:
+            drifted.append(path)
+            continue
+        except OSError as error:
+            print(f"cannot inspect project path {path}: {error}", file=sys.stderr)
+            return 2
+        try:
+            project_dir.relative_to(worktree)
+            beneath_worktree = True
+        except ValueError:
+            beneath_worktree = False
+        if project_dir != candidate or not beneath_worktree:
+            print(f"refusing symlinked or escaped project path: {path}", file=sys.stderr)
+            return 2
         result = subprocess.run(
-            ["git", "-C", str(worktree / relative), "rev-parse", "--verify", "HEAD"],
+            ["git", "-C", str(project_dir), "rev-parse", "--verify", "HEAD"],
             capture_output=True,
             text=True,
             check=False,
@@ -53,8 +76,8 @@ def main() -> int:
         if not result.returncode:
             status = subprocess.run(
                 [
-                    "git", "-C", str(worktree / relative), "status",
-                    "--porcelain=v1", "--untracked-files=no",
+                    "git", "-C", str(project_dir), "status",
+                    "--porcelain=v1", "--untracked-files=all",
                 ],
                 capture_output=True,
                 text=True,

@@ -316,7 +316,7 @@ if [[ ! -s "${comparison_lock}" \
     echo "Recovering the previous immutable lock from the /yocto manifest cache"
 fi
 full_sync=false
-changed_projects=()
+declare -a changed_projects=()
 if [[ "${force_full_sync}" == true || "${force_full_sync}" == 1 ]]; then
     echo "A complete source resynchronization was explicitly requested"
     full_sync=true

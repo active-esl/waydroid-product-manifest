@@ -67,6 +67,11 @@ def main() -> int:
             lock, project_list, worktree
         )
         (project / "tracked.txt").write_text("original\n")
+        (project / "untracked.txt").write_text("must not enter a locked build\n")
+        assert "cannot resync project with local changes" in check_failure(
+            lock, project_list, worktree
+        )
+        (project / "untracked.txt").unlink()
         git("-C", str(project), "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
             "commit", "-q", "--allow-empty", "-m", "drifted")
         assert check(lock, project_list, worktree) == "hardware/waydroid"
@@ -82,6 +87,13 @@ def main() -> int:
         ]
         project_list.write_text("hardware/unknown\n")
         assert check(lock, project_list, worktree) == "__FULL__"
+        project_list.write_text("hardware/waydroid\n")
+        real_project = worktree / "real-waydroid"
+        project.rename(real_project)
+        project.symlink_to(real_project, target_is_directory=True)
+        assert "refusing symlinked or escaped project path" in check_failure(
+            lock, project_list, worktree
+        )
         project_list.unlink()
         assert check(lock, project_list, worktree) == "__FULL__"
 
