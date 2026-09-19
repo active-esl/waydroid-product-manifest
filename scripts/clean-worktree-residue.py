@@ -34,6 +34,8 @@ def main() -> int:
         print(f"cannot inspect Android worktree: {error}", file=sys.stderr)
         return 2
 
+    cleanup_authorized = os.environ.get("ALLOW_LOCKED_SOURCE_CLEANUP") in {"1", "true"}
+
     for path in sys.argv[2:]:
         relative = Path(path)
         if not path or relative == Path(".") or relative.is_absolute() or ".." in relative.parts:
@@ -75,6 +77,12 @@ def main() -> int:
             print(f"Disposable source residue scheduled for removal from {path}:")
             for line in preview.stdout.splitlines():
                 print(f"  {line}")
+            if not cleanup_authorized:
+                print(
+                    "refusing cleanup without ALLOW_LOCKED_SOURCE_CLEANUP=true",
+                    file=sys.stderr,
+                )
+                return 2
         result = subprocess.run(
             ["git", "--no-replace-objects", "-C", str(project_dir), "clean", "-fdqx"],
             check=False,

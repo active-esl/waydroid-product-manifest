@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -43,6 +44,7 @@ def clean(worktree: Path, *projects: str) -> None:
     subprocess.run(
         ["python3", str(CLEANER), str(worktree), *projects],
         check=True,
+        env={**os.environ, "ALLOW_LOCKED_SOURCE_CLEANUP": "true"},
     )
 
 
@@ -81,6 +83,16 @@ def main() -> int:
         assert check(lock, project_list, worktree) == "hardware/waydroid"
         (project / "ignored.txt").write_text("must not enter a locked build\n")
         assert check(lock, project_list, worktree) == "hardware/waydroid"
+        refused = subprocess.run(
+            ["python3", str(CLEANER), str(worktree), "hardware/waydroid"],
+            capture_output=True, text=True, check=False,
+            env={key: value for key, value in os.environ.items()
+                 if key != "ALLOW_LOCKED_SOURCE_CLEANUP"},
+        )
+        assert refused.returncode == 2
+        assert "refusing cleanup without ALLOW_LOCKED_SOURCE_CLEANUP=true" in refused.stderr
+        assert (project / "untracked.txt").exists()
+        assert (project / "ignored.txt").exists()
         clean(worktree, "hardware/waydroid")
         assert not (project / "untracked.txt").exists()
         assert not (project / "ignored.txt").exists()
