@@ -13,6 +13,7 @@ GIT_ENV_KEYS = (
     "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
     "GIT_ALTERNATE_OBJECT_DIRECTORIES",
 )
+AUTHORIZED_RUNNER_NAME = "esl-proxmox-runner"
 
 
 def clean_git_environment() -> dict[str, str]:
@@ -21,6 +22,15 @@ def clean_git_environment() -> dict[str, str]:
         environment.pop(key, None)
     environment["GIT_NO_REPLACE_OBJECTS"] = "1"
     return environment
+
+
+def runner_cleanup_authorized() -> bool:
+    requested = os.environ.get("AESL_ALLOW_LOCKED_SOURCE_CLEANUP", "").strip().lower()
+    return (
+        requested in {"1", "true"}
+        and os.environ.get("GITHUB_ACTIONS") == "true"
+        and os.environ.get("RUNNER_NAME") == AUTHORIZED_RUNNER_NAME
+    )
 
 
 def main() -> int:
@@ -34,7 +44,9 @@ def main() -> int:
         print(f"cannot inspect Android worktree: {error}", file=sys.stderr)
         return 2
 
-    cleanup_authorized = os.environ.get("ALLOW_LOCKED_SOURCE_CLEANUP") in {"1", "true"}
+    cleanup_authorized = runner_cleanup_authorized()
+    if cleanup_authorized:
+        print(f"Authorized locked-source recovery enabled on {AUTHORIZED_RUNNER_NAME}")
 
     for path in sys.argv[2:]:
         relative = Path(path)
@@ -79,7 +91,7 @@ def main() -> int:
                 print(f"  {line}")
             if not cleanup_authorized:
                 print(
-                    "refusing cleanup without ALLOW_LOCKED_SOURCE_CLEANUP=true",
+                    "refusing cleanup outside the authorized AESL CI runner",
                     file=sys.stderr,
                 )
                 return 2

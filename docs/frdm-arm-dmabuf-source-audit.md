@@ -58,6 +58,7 @@ project trees. Before removing residue, CI prints `git clean -ndx` output with
 the owning project path to the retained build log. Nested untracked Git
 repositories are not force-deleted; they remain visible to the final drift gate
 and stop the build for manual inspection.
-Deletion also requires `ALLOW_LOCKED_SOURCE_CLEANUP=true`, which is set only on
-the dedicated Android CI build step. Local and developer invocations print the
-same inventory and fail closed unless the operator explicitly opts in.
+Deletion also requires `AESL_ALLOW_LOCKED_SOURCE_CLEANUP=true` while GitHub
+Actions identifies the runner as `esl-proxmox-runner`. The dedicated Android CI
+build step sets the switch; local and developer invocations cannot activate it
+accidentally and fail closed after printing the same inventory.

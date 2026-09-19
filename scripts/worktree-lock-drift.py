@@ -20,6 +20,7 @@ GIT_ENV_KEYS = (
     "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
     "GIT_ALTERNATE_OBJECT_DIRECTORIES",
 )
+AUTHORIZED_RUNNER_NAME = "esl-proxmox-runner"
 
 
 def clean_git_environment() -> dict[str, str]:
@@ -28,6 +29,15 @@ def clean_git_environment() -> dict[str, str]:
         environment.pop(key, None)
     environment["GIT_NO_REPLACE_OBJECTS"] = "1"
     return environment
+
+
+def runner_cleanup_authorized() -> bool:
+    requested = os.environ.get("AESL_ALLOW_LOCKED_SOURCE_CLEANUP", "").strip().lower()
+    return (
+        requested in {"1", "true"}
+        and os.environ.get("GITHUB_ACTIONS") == "true"
+        and os.environ.get("RUNNER_NAME") == AUTHORIZED_RUNNER_NAME
+    )
 
 
 def main() -> int:
@@ -78,7 +88,12 @@ def main() -> int:
 
     drifted: list[str] = []
     environment = clean_git_environment()
-    cleanup_authorized = os.environ.get("ALLOW_LOCKED_SOURCE_CLEANUP") in {"1", "true"}
+    cleanup_authorized = runner_cleanup_authorized()
+    if cleanup_authorized:
+        print(
+            f"Authorized locked-source recovery enabled on {AUTHORIZED_RUNNER_NAME}",
+            file=sys.stderr,
+        )
     for path in tracked:
         relative = Path(path)
         if relative.is_absolute() or ".." in relative.parts or path not in projects:
@@ -136,7 +151,10 @@ def main() -> int:
                 check=False,
                 env=environment,
             )
-            if tracked_status.returncode or tracked_status.stdout:
+            if tracked_status.returncode:
+                print(f"cannot inspect tracked source state: {path}", file=sys.stderr)
+                return 2
+            if tracked_status.stdout:
                 if not cleanup_authorized:
                     print(
                         f"cannot resync project with tracked local changes: {path}",
