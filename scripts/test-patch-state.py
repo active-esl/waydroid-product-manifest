@@ -15,16 +15,13 @@ REAL_REQUIREMENTS = REPO_ROOT / "locks" / "lineage-23.2-required-revisions.tsv"
 
 
 def run(
-    lock: Path, patch_root: Path, requirements: Path
+    lock: Path, patch_root: Path, requirements: Path | None = None
 ) -> subprocess.CompletedProcess[str]:
+    command = ["python3", str(PATCH_STATE), str(lock), str(patch_root)]
+    if requirements is not None:
+        command.append(str(requirements))
     return subprocess.run(
-        [
-            "python3",
-            str(PATCH_STATE),
-            str(lock),
-            str(patch_root),
-            str(requirements),
-        ],
+        command,
         check=False,
         capture_output=True,
         text=True,
@@ -41,11 +38,13 @@ def write_lock(path: Path, revision: str, include_hwc: bool = True) -> None:
 
 
 def main() -> int:
-    project, required_revision = next(
+    entries = [
         line.split("\t")
         for raw_line in REAL_REQUIREMENTS.read_text().splitlines()
         if (line := raw_line.strip()) and not line.startswith("#")
-    )
+    ]
+    assert len(entries) == 1, entries
+    project, required_revision = entries[0]
     assert project == "hardware/waydroid"
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -58,6 +57,8 @@ def main() -> int:
 
         real = run(REAL_LOCK, patch_root, REAL_REQUIREMENTS)
         assert real.returncode == 0, real.stderr
+        compatible = run(REAL_LOCK, patch_root)
+        assert compatible.returncode == 0, compatible.stderr
 
         write_lock(lock, required_revision)
         exact = run(lock, patch_root, requirements)
@@ -81,6 +82,16 @@ def main() -> int:
         absent = run(lock, patch_root, root / "absent.tsv")
         assert absent.returncode != 0, absent.stdout
         assert "required revisions file is missing" in absent.stderr
+
+        lock.write_text(
+            "<manifest>"
+            f'<project path="{project}" revision="{required_revision}" />'
+            f'<project path="{project}" revision="{required_revision}" />'
+            "</manifest>\n"
+        )
+        duplicate = run(lock, patch_root, requirements)
+        assert duplicate.returncode != 0, duplicate.stdout
+        assert "duplicate project path in source lock" in duplicate.stderr
 
     print("patch-state dependency regression tests passed")
     return 0
