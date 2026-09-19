@@ -165,7 +165,8 @@ run_repo_sync() {
     if [[ "${1:-}" != --network-only ]]; then
         sync_options+=(--force-checkout -d)
     fi
-    setsid env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
+    setsid env GIT_NO_REPLACE_OBJECTS=1 \
+        GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
         repo sync "${sync_options[@]}" "$@" &
     sync_pid=$!
     trap 'kill -TERM -- "-${sync_pid}" 2>/dev/null || true' INT TERM
@@ -239,14 +240,8 @@ sync_locked_sources() {
 }
 
 clean_project_residue() {
-    local project project_dir
-    for project in "$@"; do
-        project_dir="${android_dir}/${project}"
-        [[ -e "${project_dir}/.git" ]] \
-            || die "Cannot clean non-Git project selected by the source lock: ${project}"
-        git --no-replace-objects -C "${project_dir}" clean -ffdqx \
-            || die "Cannot remove untracked source residue: ${project}"
-    done
+    python3 "${repo_root}/scripts/clean-worktree-residue.py" "${android_dir}" "$@" \
+        || die "Cannot remove untracked residue from locked source projects"
 }
 
 for command in repo git python3 sha256sum timeout ps blkid dumpe2fs e2fsck; do

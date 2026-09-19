@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 CHECKER = Path(__file__).with_name("worktree-lock-drift.py")
+CLEANER = Path(__file__).with_name("clean-worktree-residue.py")
 
 
 def git(*args: str) -> str:
@@ -36,6 +37,13 @@ def check_failure(lock: Path, project_list: Path, worktree: Path) -> str:
     )
     assert result.returncode == 2, result.stdout + result.stderr
     return result.stderr
+
+
+def clean(worktree: Path, *projects: str) -> None:
+    subprocess.run(
+        ["python3", str(CLEANER), str(worktree), *projects],
+        check=True,
+    )
 
 
 def main() -> int:
@@ -71,10 +79,12 @@ def main() -> int:
         (project / "tracked.txt").write_text("original\n")
         (project / "untracked.txt").write_text("must not enter a locked build\n")
         assert check(lock, project_list, worktree) == "hardware/waydroid"
-        (project / "untracked.txt").unlink()
         (project / "ignored.txt").write_text("must not enter a locked build\n")
         assert check(lock, project_list, worktree) == "hardware/waydroid"
-        (project / "ignored.txt").unlink()
+        clean(worktree, "hardware/waydroid")
+        assert not (project / "untracked.txt").exists()
+        assert not (project / "ignored.txt").exists()
+        assert check(lock, project_list, worktree) == ""
 
         (project / "tracked.txt").write_text("replacement content\n")
         git("-C", str(project), "add", "tracked.txt")

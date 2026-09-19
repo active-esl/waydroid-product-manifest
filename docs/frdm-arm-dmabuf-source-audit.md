@@ -8,6 +8,7 @@ LineageOS 23.2 image. The immutable source lock remains the build authority.
 | Reviewed upstream base | `waydroid/android_hardware_waydroid@9f94eaf967934193724223206f7b421d06f4d891` |
 | Locked Active ESL fork | `active-esl/android_hardware_waydroid@b92200ac592ed43acd9f1f1bc41c09bc407b1732` |
 | Maintained integration branch | `refs/heads/lineage-23.2-aesl` |
+| Commit signature | Verified software-key SSH signature for the locked fork commit |
 | Locked path | `hardware/waydroid` in `locks/lineage-23.2-lock.xml` |
 | Comparison | <https://github.com/waydroid/android_hardware_waydroid/compare/9f94eaf967934193724223206f7b421d06f4d891...active-esl:b92200ac592ed43acd9f1f1bc41c09bc407b1732> |
 
