@@ -75,6 +75,12 @@ def main() -> int:
 
     assert 'jobs="${JOBS:-6}"' in build_script
     assert '[[ "${jobs}" =~ ^[1-9][0-9]*$ ]]' in build_script
+    # The expensive build must stop at the first failed command/target, while
+    # the following failure-only advisory step remains able to reduce evidence.
+    assert build_script.startswith("#!/usr/bin/env bash\nset -euo pipefail\n")
+    assert "--fail-fast" in build_script
+    assert "          set -o pipefail" in workflow
+    assert "steps.build-images.outcome == 'failure'" in workflow
     assert 'if [[ "${arm64_build_variant}" == user ]]; then' in build_script
     assert "imx8mm_build_variant" not in build_script
     assert "Target cache before build:" in build_script

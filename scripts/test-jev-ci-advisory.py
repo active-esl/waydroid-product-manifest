@@ -45,6 +45,19 @@ class JevCiAdvisoryClientTests(unittest.TestCase):
         self.assertNotIn("should-not-cross", body.decode())
         self.assertEqual(payload["envelope"]["target"]["board"], "imx95-frdm")
 
+    def test_late_failure_is_reduced_without_forwarding_log_noise(self):
+        log = "routine build progress\n" * 20_000
+        log += "framework.cpp:812:7: error: use of undeclared identifier 'displayMode'\n"
+        body = advisory.build_request_body(
+            log, self.context(),
+            "github:active-esl/waydroid-product-manifest:12345:1",
+        )
+        payload = json.loads(body)
+        evidence = payload["envelope"]["first_specific_error"]
+        self.assertIn("displayMode", evidence)
+        self.assertLess(len(body), 8_000)
+        self.assertNotIn("routine build progress", body.decode())
+
     def test_accepts_only_a_read_only_artifact(self):
         value = {
             "advisory": {

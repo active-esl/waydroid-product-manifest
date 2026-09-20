@@ -11,7 +11,9 @@ import sys
 from typing import Any
 
 
-MAX_LOG_CHARS = 200_000
+# The transport performs one bounded read. The extractor scans that complete
+# bounded observation locally; only the compact envelope leaves this process.
+MAX_LOG_CHARS = 64 * 1024 * 1024
 MAX_ERROR_CHARS = 1_000
 MAX_TEXT_CHARS = 3_000
 MAX_CHANGED_PATHS = 12
@@ -36,15 +38,39 @@ GENERIC_ERROR_RE = re.compile(
     r"command failed with exit code \d+\.?|ninja: build stopped: subcommand failed\.?|"
     r"make(?:\[\d+\])?: \*\*\* .*error \d+|error: task .* failed(?: with exit code .*)?)$"
 )
+BITBAKE_WRAPPER_RE = re.compile(
+    r"(?i)^(?:ERROR: )?.*do_[a-z0-9_]+:\s*(?:oe_runmake failed|ExecutionError\(|"
+    r"Error executing a python function.*|Task .* failed with exit code)|"
+    r"ERROR: .*\bdo_[a-z0-9_]+:\s+.*|ERROR: Task .*\bdo_[a-z0-9_]+ failed|"
+    r".*recipe .*: task do_[a-z0-9_]+: Failed$|ERROR: Task \(.*\) failed with exit code|"
+    r"ERROR: Logfile of failure stored in:|ERROR: oe_runmake failed$"
+)
+BITBAKE_ERROR_RE = re.compile(r"(?:^|\s)(?<!FATAL )(ERROR:\s+.+)$")
+BITBAKE_CONTEXT_RE = re.compile(
+    r"(?i)\b(?:bitbake|do_[a-z0-9_]+|recipe\s+\S+.*task|Tasks Summary|Running task \d+)\b"
+)
+BITBAKE_SUMMARY_RE = re.compile(
+    r"(?i)^ERROR:\s+(?:Logfile of failure stored in:|Task \(.*\) failed with exit code)"
+)
+DETAIL_DIAGNOSTIC_RE = re.compile(
+    r"(?i)(?:fatal error:|:\d+(?::\d+)?:\s+error:|(?:gcc|g\+\+|clang|clang\+\+).*error:|"
+    r"Exception:\s+(?:TypeError|KeyError|ValueError)|undefined reference|no space left on device|"
+    r"out of memory|oom-kill|killed process|hunk #\d+ failed|does not apply)"
+)
 SPECIFIC_ERROR_PATTERNS = (
-    re.compile(r"(?i)undefined reference|fatal error: .*: no such file|\berror: .*undeclared|"
-               r"no member named|multiple definition"),
+    re.compile(r"(?i)undefined reference|fatal error: .*(?:: no such file| file not found)|"
+               r"\berror: .*undeclared|no member named|multiple definition|"
+               r"(?:gcc|g\+\+|clang|clang\+\+).*error:|:\d+:\d+: error:|"
+               r"Exception: (?:TypeError|KeyError|ValueError)"),
     re.compile(r"(?i)devicetree error|\.dts:\d+.*(?:syntax error|parse error)|"
                r"undefined node label|kconfig (?:error|warning)|(?:undefined|unknown) symbol|missing dependency"),
     re.compile(r"(?i)nothing provides|hunk #\d+ failed|does not apply|revision .* not found|"
                r"unable to find revision|manifest .* (?:invalid|missing)|no platform target"),
+    re.compile(r"(?i)device .* not found|repository for .* not found|"
+               r"repo sync.*(?:rejects|invalid|failed)|error: hooks is different"),
     re.compile(r"(?i)no space left on device|out of memory|oom-kill|killed process|"
-               r"no matching online runner|requested labels.*no matching"),
+               r"no matching online runner|requested labels.*no matching|"
+               r"runner has received a shutdown signal|runner service is stopped"),
     re.compile(r"(?i)assert(?:ion)? failed|test(?: suite)? .* failed|timed out waiting|"
                r"boot banner.*(?:missing|timeout)|flash verification failed"),
     re.compile(r"(?i)artifact .* (?:does not exist|missing)|hash mismatch|sha256 .* differs|"
@@ -111,16 +137,51 @@ def _clean_paths(values: Any) -> tuple[list[str], bool]:
 
 
 def first_specific_error(log: str) -> str | None:
-    """Return the first causal-looking line, ignoring generic terminal summaries."""
-    lines = [" ".join(line.strip().split()) for line in log.splitlines()]
+    """Return compact evidence for the earliest meaningful failure in the log."""
+    lines = [" ".join(line.strip().lstrip("| ").split()) for line in log.splitlines()]
     lines = [line for line in lines if line and not line.startswith("##[")]
+
+    # BitBake tasks can keep running after one task has failed. Start from the
+    # earliest ERROR-level record rather than the end of the console log.
+    error_records: list[tuple[int, str]] = []
+    if any(BITBAKE_CONTEXT_RE.search(line) for line in lines):
+        for index, line in enumerate(lines):
+            match = BITBAKE_ERROR_RE.search(line)
+            if match:
+                error_records.append((index, match.group(1)))
+    first_record = next(
+        ((index, record) for index, record in error_records
+         if not BITBAKE_SUMMARY_RE.search(record)),
+        None,
+    )
+    if first_record is not None:
+        index, record = first_record
+        if not BITBAKE_WRAPPER_RE.search(record):
+            return record[:MAX_ERROR_CHARS]
+        next_summary = next(
+            (line_index for line_index, candidate in error_records
+             if line_index > index and BITBAKE_SUMMARY_RE.search(candidate)),
+            len(lines),
+        )
+        block_start = max(0, index - 80)
+        block_end = min(next_summary, index + 200)
+        detail = next(
+            (line for line in lines[block_start:block_end]
+             if line != record and DETAIL_DIAGNOSTIC_RE.search(line)),
+            None,
+        )
+        if detail:
+            return f"{record} — {detail}"[:MAX_ERROR_CHARS]
+        return record[:MAX_ERROR_CHARS]
+
     for line in lines:
-        if GENERIC_ERROR_RE.fullmatch(line):
+        if GENERIC_ERROR_RE.fullmatch(line) or BITBAKE_WRAPPER_RE.search(line):
             continue
         if any(pattern.search(line) for pattern in SPECIFIC_ERROR_PATTERNS[:-1]):
             return line[:MAX_ERROR_CHARS]
     for line in lines:
-        if not GENERIC_ERROR_RE.fullmatch(line) and SPECIFIC_ERROR_PATTERNS[-1].search(line):
+        if (not GENERIC_ERROR_RE.fullmatch(line) and not BITBAKE_WRAPPER_RE.search(line)
+                and SPECIFIC_ERROR_PATTERNS[-1].search(line)):
             return line[:MAX_ERROR_CHARS]
     return None
 
@@ -265,4 +326,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
