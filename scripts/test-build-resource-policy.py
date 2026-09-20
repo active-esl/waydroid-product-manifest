@@ -81,6 +81,15 @@ def main() -> int:
     assert "--fail-fast" in build_script
     assert "          set -o pipefail" in workflow
     assert "steps.build-images.outcome == 'failure'" in workflow
+    registration_step = "      - name: Register exact FRDM run continuation before long work"
+    regression_step = "      - name: Regression-test source lock validation"
+    assert workflow.count(registration_step) == 1
+    assert workflow.index(registration_step) < workflow.index(regression_step), (
+        "FRDM continuation registration must fail closed before long build work"
+    )
+    assert "        if: ${{ inputs.build_scope == 'imx95_frdm' }}" in workflow
+    assert "inputs.continuation_thread_id != ''" not in workflow
+    assert '            --thread-id "${{ inputs.continuation_thread_id }}"' in workflow
     assert 'if [[ "${arm64_build_variant}" == user ]]; then' in build_script
     assert "imx8mm_build_variant" not in build_script
     assert "Target cache before build:" in build_script
