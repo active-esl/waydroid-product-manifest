@@ -52,7 +52,9 @@ jobs:
       - name: Regression-test checked-out source lock gate
         run: python3 scripts/test-worktree-lock-drift.py
       - name: Regression-test Android CI resource policy
-        run: python3 scripts/test-build-resource-policy.py
+        run: |
+          python3 scripts/test-build-resource-policy.py
+          python3 scripts/test-jev-ci-advisory.py
       - name: Install pinned Android repo launcher
         run: scripts/install-repo-tool.sh
       - name: Preflight CI storage
@@ -67,6 +69,7 @@ jobs:
           fi
           df -h / /yocto
       - name: Build Android R16 / LineageOS 23.2 image scope
+        id: build-images
         env:
           ANDROID_WORKSPACE: /yocto/android-16-source
           ANDROID_X86_64_OUT_DIR: /yocto/android-16-source/out-x86_64
@@ -85,7 +88,52 @@ jobs:
           AESL_ALLOW_LOCKED_SOURCE_CLEANUP: "true"
           ARM64_BUILD_VARIANT: ${{ inputs.arm64_variant }}
           BUILD_SCOPE: ${{ inputs.build_scope }}
-        run: scripts/build-images.sh
+        run: |
+          install -d "${RUNNER_TEMP}/jev-ci"
+          set -o pipefail
+          scripts/build-images.sh 2>&1 | tee "${RUNNER_TEMP}/jev-ci/android-frdm-build.log"
+      - name: Create non-required Jev advisory for an FRDM build failure
+        if: ${{ failure() && inputs.build_scope == 'imx95_frdm' && steps.build-images.outcome == 'failure' }}
+        continue-on-error: true
+        env:
+          JEV_CI_ADVISORY_HMAC_SECRET: ${{ secrets.JEV_CI_ADVISORY_HMAC_SECRET }}
+          JEV_OUTPUT_DIR: ${{ runner.temp }}/jev-ci/advisory
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          context = {
+              "failed_job": "Android R16 / LineageOS 23.2 - FRDM i.MX95 standard vendor",
+              "failed_step": "Build Android R16 / LineageOS 23.2 image scope",
+              "build_system": "android-soong-ninja",
+              "board": "imx95-frdm",
+              "build_target": "imx95_frdm",
+              "tuple": "android-r16:lineageos-23.2:imx95-frdm:standard:arm64",
+              "artifact_name": "android-r16-frdm-${{ github.run_id }}-${{ github.run_attempt }}",
+          }
+          output = Path(os.environ["JEV_OUTPUT_DIR"])
+          output.mkdir(parents=True, exist_ok=True)
+          (output / "context.json").write_text(json.dumps(context), encoding="utf-8")
+          PY
+          python3 scripts/request-jev-ci-advisory.py \
+            --log "${RUNNER_TEMP}/jev-ci/android-frdm-build.log" \
+            --context "${JEV_OUTPUT_DIR}/context.json" \
+            --request-id "github:${{ github.repository }}:${{ github.run_id }}:${{ github.run_attempt }}" \
+            --output-dir "${JEV_OUTPUT_DIR}"
+          rm -f "${JEV_OUTPUT_DIR}/context.json"
+      - name: Upload non-required Jev FRDM failure advisory
+        if: ${{ failure() && inputs.build_scope == 'imx95_frdm' && steps.build-images.outcome == 'failure' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: jev-ci-advisory-frdm-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/jev-ci/advisory/jev-ci-advisory.json
+            ${{ runner.temp }}/jev-ci/advisory/jev-ci-advisory.md
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Attest Android R16 build provenance
         id: attest-provenance
         if: success()
@@ -112,3 +160,13 @@ jobs:
         run: |
           echo 'FRDM build evidence remains on the self-hosted runner at:' >> "$GITHUB_STEP_SUMMARY"
           echo '/yocto/android-16-artifacts/${{ github.run_id }}-${{ github.run_attempt }}' >> "$GITHUB_STEP_SUMMARY"
+      - name: Emit FRDM build-success continuation event
+        if: ${{ success() && inputs.build_scope == 'imx95_frdm' }}
+        continue-on-error: true
+        env:
+          JEV_CI_ADVISORY_HMAC_SECRET: ${{ secrets.JEV_CI_ADVISORY_HMAC_SECRET }}
+        run: |
+          python3 scripts/emit-ci-completion.py \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --commit-sha "${{ github.sha }}"
