@@ -48,6 +48,26 @@ Choose two inputs:
 | `arm64_variant=userdebug` | Integration and diagnosis; the default |
 | `arm64_variant=user` | Production-gated ARM64 build; still requires release and board acceptance |
 
+An `imx95_frdm` build must also carry the UUID of the Codex task that owns the
+wait. The workflow registers its immutable GitHub run ID and attempt with that
+task before any long work. Registration failure stops the run immediately;
+never omit the task ID and fall back to a scheduled status watcher.
+
+From the owning Codex task, dispatch the build with:
+
+```sh
+test -n "${CODEX_THREAD_ID:-}" || { echo "CODEX_THREAD_ID is required" >&2; exit 2; }
+gh workflow run build-lineage-23.2-images.yml \
+  --ref main \
+  -f build_scope=imx95_frdm \
+  -f arm64_variant=userdebug \
+  -f continuation_thread_id="${CODEX_THREAD_ID}"
+```
+
+GitHub supplies `run_id` and `run_attempt` inside the workflow, so the launcher
+does not need to discover or poll for the run after dispatch. Success and
+failure callbacks resume only the registered task.
+
 The Actions run, job and uploaded artifact distinguish **Generic ARM64 standard
 baseline**, **Jaguar Screen i.MX8MM 2 GB**, and **FRDM i.MX95 standard vendor**.
 The generic baseline is not evidence that its `vendor.img` works on FRDM. The
