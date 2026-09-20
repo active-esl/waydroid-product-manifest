@@ -64,7 +64,7 @@ SPECIFIC_ERROR_PATTERNS = (
                r"Exception: (?:TypeError|KeyError|ValueError)"),
     re.compile(r"(?i)devicetree error|\.dts:\d+.*(?:syntax error|parse error)|"
                r"undefined node label|kconfig (?:error|warning)|(?:undefined|unknown) symbol|missing dependency"),
-    re.compile(r"(?i)nothing provides|hunk #\d+ failed|does not apply|revision .* not found|"
+    re.compile(r"(?i)nothing provides|patch failed|hunk #\d+ failed|does not apply|revision .* not found|"
                r"unable to find revision|manifest .* (?:invalid|missing)|no platform target"),
     re.compile(r"(?i)device .* not found|repository for .* not found|"
                r"repo sync.*(?:rejects|invalid|failed)|error: hooks is different"),
