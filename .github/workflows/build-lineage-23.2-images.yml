@@ -24,6 +24,10 @@ on:
           - imx95_frdm
           - x86_64
           - x86_64_2gb
+      continuation_thread_id:
+        description: Optional Codex task UUID to resume on this exact FRDM run result
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -44,6 +48,15 @@ jobs:
     timeout-minutes: 1440
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Register exact FRDM run continuation before long work
+        if: ${{ inputs.build_scope == 'imx95_frdm' && inputs.continuation_thread_id != '' }}
+        env:
+          JEV_CI_ADVISORY_HMAC_SECRET: ${{ secrets.JEV_CI_ADVISORY_HMAC_SECRET }}
+        run: |
+          python3 scripts/register-ci-wait.py \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --thread-id "${{ inputs.continuation_thread_id }}"
       - name: Regression-test source lock validation
         run: |
           python3 scripts/test-validate-lock.py
@@ -91,7 +104,10 @@ jobs:
         run: |
           install -d "${RUNNER_TEMP}/jev-ci"
           set -o pipefail
-          scripts/build-images.sh 2>&1 | tee "${RUNNER_TEMP}/jev-ci/android-frdm-build.log"
+          python3 scripts/ci-fail-fast.py \
+            --evidence-output "${RUNNER_TEMP}/jev-ci/first-failure.json" \
+            -- scripts/build-images.sh \
+            | tee "${RUNNER_TEMP}/jev-ci/android-frdm-build.log"
       - name: Create non-required Jev advisory for an FRDM build failure
         if: ${{ failure() && inputs.build_scope == 'imx95_frdm' && steps.build-images.outcome == 'failure' }}
         continue-on-error: true

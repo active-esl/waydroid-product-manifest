@@ -19,9 +19,47 @@ COMPLETION_SPEC = importlib.util.spec_from_file_location("emit_ci_completion", C
 completion = importlib.util.module_from_spec(COMPLETION_SPEC)
 assert COMPLETION_SPEC.loader is not None
 COMPLETION_SPEC.loader.exec_module(completion)
+REGISTRATION_SCRIPT = Path(__file__).with_name("register-ci-wait.py")
+REGISTRATION_SPEC = importlib.util.spec_from_file_location("register_ci_wait", REGISTRATION_SCRIPT)
+registration = importlib.util.module_from_spec(REGISTRATION_SPEC)
+assert REGISTRATION_SPEC.loader is not None
+REGISTRATION_SPEC.loader.exec_module(registration)
+FAIL_FAST_SCRIPT = Path(__file__).with_name("ci-fail-fast.py")
+FAIL_FAST_SPEC = importlib.util.spec_from_file_location("ci_fail_fast", FAIL_FAST_SCRIPT)
+fail_fast = importlib.util.module_from_spec(FAIL_FAST_SPEC)
+assert FAIL_FAST_SPEC.loader is not None
+FAIL_FAST_SPEC.loader.exec_module(fail_fast)
 
 
 class JevCiAdvisoryClientTests(unittest.TestCase):
+    def test_wait_registration_is_exact_and_bounded(self):
+        payload = registration.build_registration(
+            12345, 2, "01a0b366-c1d1-7260-860f-e128d360c7d9", now=1_700_000_000,
+        )
+        self.assertEqual(
+            payload["correlation_id"],
+            "github:active-esl/waydroid-product-manifest:12345:2",
+        )
+        self.assertEqual(payload["expires_at"], 1_700_604_740)
+        self.assertNotIn("prompt", payload)
+
+    def test_wait_registration_rejects_non_task_identity(self):
+        with self.assertRaises(ValueError):
+            registration.build_registration(12345, 2, "Plan kiosk browser tuple")
+
+    def test_fail_fast_detects_actionable_android_failure(self):
+        evidence = fail_fast.detect_failure(
+            "framework.cpp:812:7: error: use of undeclared identifier 'displayMode'"
+        )
+        self.assertEqual(evidence["reason"], "android_actionable_failure")
+        self.assertIsNone(fail_fast.detect_failure("[ 91%] routine build progress"))
+
+    def test_fail_fast_redacts_secret_from_bounded_evidence(self):
+        evidence = fail_fast.detect_failure(
+            "FAILED: Authorization: Bearer should-not-cross"
+        )
+        self.assertNotIn("should-not-cross", json.dumps(evidence))
+
     def context(self):
         return {
             "failed_job": "Android R16 / LineageOS 23.2 - FRDM i.MX95 standard vendor",
