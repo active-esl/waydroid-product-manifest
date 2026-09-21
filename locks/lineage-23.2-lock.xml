@@ -1222,7 +1222,7 @@
     <copyfile src="lk_inc.mk" dest="lk_inc.mk"/>
   </project>
   <project name="waydroid/android_external_ffmpeg" path="external/ffmpeg" remote="ghub" revision="c5b53ceda3390c614bc10095d31f7be6b29337eb" upstream="refs/heads/dev/lineage-23.2" dest-branch="refs/heads/dev/lineage-23.2" groups="local::02-waydroid" clone-depth="1"/>
-  <project name="active-esl/android_hardware_waydroid" path="hardware/waydroid" remote="ghub" revision="b92200ac592ed43acd9f1f1bc41c09bc407b1732" upstream="refs/heads/lineage-23.2-aesl" dest-branch="refs/heads/lineage-23.2-aesl" groups="local::02-waydroid" clone-depth="1"/>
+  <project name="active-esl/android_hardware_waydroid" path="hardware/waydroid" remote="ghub" revision="01990a49389b1b23ad2f5ee09f5e440f16652593" upstream="refs/heads/lineage-23.2-aesl" dest-branch="refs/heads/lineage-23.2-aesl" groups="local::02-waydroid" clone-depth="1"/>
   <project name="waydroid/android_prebuilts_vndk_v34" path="prebuilts/vndk/v34" remote="ghub" revision="abe57d2399e143ca59692d2ca47f1e26d6e9802d" upstream="refs/heads/dev/lineage-23.2" dest-branch="refs/heads/dev/lineage-23.2" groups="local::02-waydroid,pdk" clone-depth="1"/>
   <project name="waydroid/android_vendor_waydroid_init" path="vendor/extra/init" remote="ghub" revision="a7acd96e1fb40e7b2dddf9e16406c300819e375b" upstream="refs/heads/dev/lineage-23.2" dest-branch="refs/heads/dev/lineage-23.2" groups="local::02-waydroid" clone-depth="1"/>
   
