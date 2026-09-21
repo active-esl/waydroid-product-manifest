@@ -54,6 +54,14 @@ class JevCiAdvisoryClientTests(unittest.TestCase):
         self.assertEqual(evidence["reason"], "android_actionable_failure")
         self.assertIsNone(fail_fast.detect_failure("[ 91%] routine build progress"))
 
+    def test_fail_fast_ignores_failed_class_name_in_soong_path(self):
+        line = (
+            "Warning in ./out-imx95-frdm/soong/.intermediates/packages/modules/"
+            "ExtServices/ExtServices-sminus.jar:kotlinx/coroutines/channels/"
+            "ChannelResult$Failed.class:"
+        )
+        self.assertIsNone(fail_fast.detect_failure(line))
+
     def test_fail_fast_redacts_secret_from_bounded_evidence(self):
         evidence = fail_fast.detect_failure(
             "FAILED: Authorization: Bearer should-not-cross"

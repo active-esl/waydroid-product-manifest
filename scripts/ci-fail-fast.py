@@ -23,7 +23,7 @@ FAIL_FAST_EXIT = 86
 ANDROID_FATAL = re.compile(
     r"(?i)(?:^FAILED:\s+|^ninja:\s+(?:error|build stopped):|"
     r"^error:\s+(?!process completed)|:\d+(?::\d+)?:\s+(?:fatal\s+)?error:|"
-    r"\bsoong(?:_build)?\b.*\b(?:error|failed)\b|"
+    r"^soong(?:_build)?(?:\s|:).*\b(?:error|failed)\b|"
     r"\b(?:lpmake|avbtool)\b.*\b(?:error|failed)\b)"
 )
 
