@@ -6,15 +6,15 @@ LineageOS 23.2 image. The immutable source lock remains the build authority.
 | Item | Revision |
 | --- | --- |
 | Reviewed upstream base | `waydroid/android_hardware_waydroid@9f94eaf967934193724223206f7b421d06f4d891` |
-| Locked Active ESL fork | `active-esl/android_hardware_waydroid@01990a49389b1b23ad2f5ee09f5e440f16652593` |
+| Locked Active ESL fork | `active-esl/android_hardware_waydroid@d481be79d7d96f790e3ec257bcb7c57e8fe26816` |
 | Maintained integration branch | `refs/heads/lineage-23.2-aesl` |
-| Commit signature | Verified GitHub merge signature; reviewed source commit `af701c23e4e199887565f3e98d38aa10bb41f934` has a verified software-key SSH signature |
+| Commit signature | Verified GitHub merge signature; reviewed source commit `3745e7cd2807539e5f88f758d0e860f13a6a8bd6` has a verified software-key SSH signature |
 | Locked path | `hardware/waydroid` in `locks/lineage-23.2-lock.xml` |
-| Comparison | <https://github.com/waydroid/android_hardware_waydroid/compare/9f94eaf967934193724223206f7b421d06f4d891...active-esl:01990a49389b1b23ad2f5ee09f5e440f16652593> |
+| Comparison | <https://github.com/waydroid/android_hardware_waydroid/compare/9f94eaf967934193724223206f7b421d06f4d891...active-esl:d481be79d7d96f790e3ec257bcb7c57e8fe26816> |
 
 ## Reviewed delta
 
-The comparison changes four HWC files with 145 insertions and eight deletions:
+The comparison changes four HWC files with 162 insertions and 21 deletions:
 
 - `hwcomposer/wayland-hwc.h` adds an explicit Arm gralloc type.
 - `hwcomposer/wayland-hwc.cpp` selects that type and binds Wayland
@@ -27,6 +27,9 @@ The comparison changes four HWC files with 145 insertions and eight deletions:
   cached Wayland buffer. If SurfaceFlinger recycles a native handle address,
   the composer now imports the replacement allocation instead of continuing
   to present the stale buffer.
+  It also waits for the producer acquire fence before importing a replacement
+  DMA-BUF, preventing the i.MX95 Mali/GBM path from retaining the boot frame
+  when Android presents its first application surface.
 
 The delta does not add dependencies, generated binaries, network access, build
 scripts, or privileged Android services. Unsupported formats and missing
@@ -38,10 +41,10 @@ process or falling back to CPU readback.
 ```sh
 git clone https://github.com/active-esl/android_hardware_waydroid.git
 cd android_hardware_waydroid
-git verify-commit 01990a49389b1b23ad2f5ee09f5e440f16652593
-git diff --check 9f94eaf967934193724223206f7b421d06f4d891 01990a49389b1b23ad2f5ee09f5e440f16652593
-git diff --stat 9f94eaf967934193724223206f7b421d06f4d891 01990a49389b1b23ad2f5ee09f5e440f16652593
-git diff 9f94eaf967934193724223206f7b421d06f4d891 01990a49389b1b23ad2f5ee09f5e440f16652593 -- hwcomposer
+git verify-commit d481be79d7d96f790e3ec257bcb7c57e8fe26816
+git diff --check 9f94eaf967934193724223206f7b421d06f4d891 d481be79d7d96f790e3ec257bcb7c57e8fe26816
+git diff --stat 9f94eaf967934193724223206f7b421d06f4d891 d481be79d7d96f790e3ec257bcb7c57e8fe26816
+git diff 9f94eaf967934193724223206f7b421d06f4d891 d481be79d7d96f790e3ec257bcb7c57e8fe26816 -- hwcomposer
 ```
 
 At the source-sync boundaries, the CI worktree gate verifies every selected
