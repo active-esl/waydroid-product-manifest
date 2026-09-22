@@ -6,11 +6,11 @@ LineageOS 23.2 image. The immutable source lock remains the build authority.
 | Item | Revision |
 | --- | --- |
 | Reviewed upstream base | `waydroid/android_hardware_waydroid@9f94eaf967934193724223206f7b421d06f4d891` |
-| Locked Active ESL fork | `active-esl/android_hardware_waydroid@d481be79d7d96f790e3ec257bcb7c57e8fe26816` |
+| Locked Active ESL fork | `active-esl/android_hardware_waydroid@6ce13fb6bf23d3451f4004b5751bed28318f746e` |
 | Maintained integration branch | `refs/heads/lineage-23.2-aesl` |
 | Commit signature | Verified GitHub merge signature; reviewed source commit `3745e7cd2807539e5f88f758d0e860f13a6a8bd6` has a verified software-key SSH signature |
 | Locked path | `hardware/waydroid` in `locks/lineage-23.2-lock.xml` |
-| Comparison | <https://github.com/waydroid/android_hardware_waydroid/compare/9f94eaf967934193724223206f7b421d06f4d891...active-esl:d481be79d7d96f790e3ec257bcb7c57e8fe26816> |
+| Comparison | <https://github.com/waydroid/android_hardware_waydroid/compare/9f94eaf967934193724223206f7b421d06f4d891...active-esl:6ce13fb6bf23d3451f4004b5751bed28318f746e> |
 
 ## Reviewed delta
 
@@ -41,10 +41,10 @@ process or falling back to CPU readback.
 ```sh
 git clone https://github.com/active-esl/android_hardware_waydroid.git
 cd android_hardware_waydroid
-git verify-commit d481be79d7d96f790e3ec257bcb7c57e8fe26816
-git diff --check 9f94eaf967934193724223206f7b421d06f4d891 d481be79d7d96f790e3ec257bcb7c57e8fe26816
-git diff --stat 9f94eaf967934193724223206f7b421d06f4d891 d481be79d7d96f790e3ec257bcb7c57e8fe26816
-git diff 9f94eaf967934193724223206f7b421d06f4d891 d481be79d7d96f790e3ec257bcb7c57e8fe26816 -- hwcomposer
+git verify-commit 6ce13fb6bf23d3451f4004b5751bed28318f746e
+git diff --check 9f94eaf967934193724223206f7b421d06f4d891 6ce13fb6bf23d3451f4004b5751bed28318f746e
+git diff --stat 9f94eaf967934193724223206f7b421d06f4d891 6ce13fb6bf23d3451f4004b5751bed28318f746e
+git diff 9f94eaf967934193724223206f7b421d06f4d891 6ce13fb6bf23d3451f4004b5751bed28318f746e -- hwcomposer
 ```
 
 At the source-sync boundaries, the CI worktree gate verifies every selected
